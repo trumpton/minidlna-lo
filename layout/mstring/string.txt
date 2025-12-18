@@ -1,0 +1,314 @@
+STRING LIBRARY
+==============
+
+The String Library is a standard C library, used for manipulating strings and
+lists of strings.
+
+TYPES
+=====
+
+There are three data types associated with the library:
+
+character   This is a single character, for example, a capital A, an "e acute"
+            or a Euro character.  When stored in files, these characters may
+	    be expressed in one or more bytes, through various character
+	    encodings.
+
+	    The string library is capable of converting character strings to
+	    and from UTF-8 encoded byte strings (cstr), expanding as required.
+
+string      This is a series of characters, and is manipulated with the
+       	    string_xxx functions.
+
+stringlist  This is a simple list of strings, which can be appended to,
+	    interrogated and cleared.
+
+
+INITIALISATION AND DESTRUCTION
+==============================
+
+String and Stringlists must be initialised before used, and freed when no longer
+required.  Failure to free will result in memory leaks.  For Example:
+
+	   #include "string.h"
+
+	   string str1 = string_new() ;
+	   string str2 = string_newfrom("Initial UTF-8 Encoded cstr Value") ;
+	   stringlist list1 = stringlist_new() ;
+	   ...
+
+	   stringlist_free(list1) ;
+	   string_free(str2) ;
+	   string_free(str1) ;
+
+STRING MANIPULATION
+===================
+
+Once created, strings can be manipulated in the following ways:
+
+     Copy
+     Concattanation
+     Substring Extraction
+     String Replace
+     Capitalisation
+     String Splitting
+     
+STRING COPY
+-----------
+
+A source string can be copied into a destination using the strcpy function.
+If the source is a UTF-8 encoded byte sequence, the cstrcpy function can be
+used.
+
+The functions return the length of the new destination string, or -1 if there
+was an error.
+
+	long int newlen ;
+	string dst1 = string_new() ;
+	string dst2 = string_new() ;
+	string_str1 = string_newfrom("Str2") ;
+	
+	newlen = string_strcpy(dst1, str1) ;
+	newlen = string_cstrcpy(dst2, "UTF-8 Encoded") ;
+	
+	string_free(str1) ;
+	string_free(dst2) ;
+	string_free(dst1) ;
+	
+STRING CONCATTANATION
+---------------------
+
+It is possible to concattanate two or more strings with the strcat function.
+There are two versions of this function, the first appending a single string
+and the second appending a number of strings.
+
+The function returns the length of the resulting string, or -1 if there was
+an error.
+
+    	long int len ;
+    	string dst = string_new() ;
+	string str1 = string_newfrom("This") ;
+	string sp = string_newfrom(" ") ;
+	string str2 = string_newfrom("is") ;
+	string str3 = string_newfom("useful") ;
+
+	len=string_strcat(dst, str1) ;
+	len=string_strcatn(dst, sp, str2, sp, str3, NULL) ;
+
+	string_free(str3) ;
+	string_free(str2) ;
+	string_free(str1) ;
+	string_free(dst) ;
+	
+
+SUBSTRING EXTRACTION
+--------------------
+
+The substring function enables part of a string to be extracted (between a
+'start' and 'end' reference).  The resulting string overwrites the destination.
+If the 'end' is -1, then the string from 'start' to the end is extracted.
+
+      string src = string_newfrom("This is a source text") ;
+      string this = string_new() ;
+      string text = string_new() ;
+      
+      string_substring(src, this, 0, 3) ;
+      string_substring(src, text, 17, -1) ;
+
+      string_free(text) ;
+      string_free(this) ;
+      string_free(src) ;
+
+
+STRING REPLACE
+--------------
+
+Strings within strings can be replaced.  There are two replace functions that
+can be used to substitute a substring.
+
+The simple string_replace, takes 3 arguments: the string, and the what/with
+source and replacement text.  The function returns the number of strings
+replaced.
+
+The string_replacen function is more powerful, and takes 5 arguments: The same
+3 as before, plus a start position and count.  Everything between 'start' and
+the end of the string will be considered for a replacement.  The count gives
+the maximum number of replacements to perform (or -1 for as many as possible).
+This function also returns the number of strings replaced.
+
+       string src = string_newfrom("This is a string with 3 instances of is") ;
+       string whats = string_newfrom("is") ;
+       string withs = string_newfrom("was") ;
+       string whatn = string_newfrom("3") ;
+       string withn = string_newfrom("1") ;
+       
+       int n = string_replace(src, whatn, withn) ;		// n=1
+       int s = string_replacen(src, whats, withs, 5, 2) ; 	// s=2
+
+       string_free(withn) ;
+       string_free(whatn) ;
+       string_free(withs) ;
+       string_free(whats) ;
+       string_free(src) ;
+
+CAPITALISATION
+--------------
+
+The string_capitalise function is used to convert the case of the string.
+It takes an option, which is used to specify how the source string is
+processed.
+
+	string str = string_newfrom("this is a string") ;
+
+	str_capitalise(str, TOUPPER) ;    // str => THIS IS A STRING
+	str_capitalise(str, CAPITALISE) ; // str => This Is A String
+	str_capitalise(str, TOLOWER) ;    // str => this is a string
+
+	string_free(str) ;
+
+
+STRING SPLITTING
+----------------
+
+A string can be split into multiple strings at a given character.  The
+resulting strings are placed in a stringlist (see below).
+
+	  string str = string_newfrom("this/is/a/test/string") ;
+	  stringlist list = stringlist_new() ;
+	  int i ;
+	  
+	  i=string_split(str, '/', list) ;  // i=5
+
+	  stringlist_free(list) ;
+	  string_free(str) ;
+	  
+
+STRING QUERY AND CONVERSION
+===========================
+
+string_strlen returns the number of characters in the string (or -1 on error)
+string_cstrlen returns the number of bytes in an equivalent UTF-8 encoded
+version of the string.
+
+
+	string str = string_newfrom("The euro: 0xE2\0x82\0xAC") ;
+	long int i ;
+	unsigned char *cstr ;
+	
+	i = string_strlen(str) ;    // Length in characters: i=11
+	i = string_cstrlen(str) ;   // UTF8 String Length: i=13
+
+	i = string_findch(str, (character)0x20AC) ; // Euro at: i=10
+	i = string_rfindch(str, (character)'e') ; // Second 'e' at: i=4
+	
+	string_free(str) ;
+	
+string_cstr returns a pointer to the UTF-8 version of the string (managing all
+of the required internal memory allocations, as the cstr version is stored
+within the string itsef).  The pointer is updated (if necessary) on subsequent
+calls to string_cstr.
+
+      unsigned char *ptr1, *ptr2, *ptr3 ;
+      string str1 = string_newfrom("test") ;
+      string str2 = string_newfrom(" string") ;
+
+      ptr1 = string_cstr(str1) ;
+      ptr2 = string_cstr(str2) ;
+
+      printf("ptr1 = %s, ptr2 = %s\n", ptr1, ptr2) ;
+
+      string_strcat(str1, str2) ;
+
+      // Re-calling string_cstr when str1 has changed invalidates
+      // the previous ptr1.
+      
+      ptr3 = string_cstr(str1) ;
+      printf("ptr1 = invalid, ptr2 = %s, ptr3 = %s\n", ptr2, ptr3) ;
+
+      string_free(str1) ;
+      string_free(str2) ;
+
+
+STRING TEST
+===========
+
+MATCH
+-----
+
+The string_match function compares two strings, and returns 0 if the strings
+are identical.  If the first string comes alphabetically before the second,
+the function returns -1, and if it comes after, the function returns 1.
+
+    	     string str1 = string_newfrom("First String") ;
+	     string str2 = string_newfrom("Second String") ;
+	     int i ;
+	     
+	     i = string_match(str1, str1) ; // Returns 0
+	     i = string_match(str1, str2) ; // Returns -1
+	     i = string_match(str2, str1) ; // Returns 1
+
+	     string_free(str1) ;
+	     string_free(str2) ;
+
+FILE IO
+=======
+
+A readline function is provided, which manages memory allocations automatically.
+The function returns the number of characters read.
+Or -1 end of file.
+Or -2 on error.
+
+  	     string line = string_new() ;
+	     FILE *fp ;
+
+	     fp=fopen("input.txt", "rb") ;
+	     while (string_readline(fp, line)>=0) {
+	     	   printf("Line: %s\n", string_cstr(line)) ;
+	     }
+
+	     fclose(fp) ;
+	     string_free(line) ;
+
+STRINGLIST
+==========
+
+The stringlist functions support the management of a simple list of strings
+
+INITIALISATION AND DESTRUCTION
+==============================
+
+stringlists are created and freed in the same way as strings.  An additional
+function is provided to clear the contents of a stringlist.
+
+stringlist_push_back takes a copy of a string and adds it to the end of the
+list.
+
+stringlist_at returns a string pointer (type string).
+
+stringlist_clear clears the entire list, invalidating any pointers generated
+through stringlist_at.
+
+	    stringlist list = stringlist(new) ;
+	    int i, j ;
+
+	    // Add a string to the list
+	    string str1 = string_newfrom("String") ;
+	    stringlist_push_back(list, str1) ;
+	    string_free(str1) ;
+
+	    // Calculate the length of the list
+	    i = stringlist_len(list) ;	// i=1
+
+	    // Extract a pointer to an item in the list
+	    string str2 = stringlist_at(list, 0) ;
+	    printf("str2 = %s\n", string_cstr(str2)) ;
+
+	    // Clear the list, invalidating pointer str2
+	    stringlist_clear(list) ;
+
+	    // Calculate the length of the list
+	    i = stringlist_len(list) ;		// i=0
+
+	    // Release the list
+	    stringlist_free(list) ;
+	    
