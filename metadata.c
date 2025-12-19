@@ -281,11 +281,20 @@ GetFolderMetadata(const char *name, const char *path, const char *artist, const 
 {
 	int ret;
 
+	char *ntitle = metadata_tidy_dupfield(name, "title") ;
+	char *nartist = metadata_tidy_dupfield(artist, "artist") ;
+	char *ngenre = metadata_tidy_dupfield(genre, "genre") ;
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (TITLE, PATH, CREATOR, ARTIST, GENRE, ALBUM_ART) "
 	                   "VALUES"
 	                   " ('%q', %Q, %Q, %Q, %Q, %lld);",
-	                   name, path, artist, artist, genre, album_art);
+	                   ntitle, path, nartist, nartist, ngenre, album_art);
+
+	metadata_tidy_freefield(ntitle) ;
+	metadata_tidy_freefield(nartist) ;
+	metadata_tidy_freefield(ngenre) ;
+
 	if( ret != SQLITE_OK )
 		ret = 0;
 	else
@@ -478,14 +487,19 @@ GetAudioMetadata(const char *path, const char *name)
 
 	album_art = find_album_art(path, song.image, song.image_size);
 
+	metadata_t* m2 = metadata_tidy_dup(&m) ;
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
 	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
 	                   "VALUES"
 	                   " (%Q, %lld, %lld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
-	                   path, (long long)file.st_size, (long long)file.st_mtime, m.duration, song.channels, song.bitrate,
-	                   song.samplerate, m.date, m.title, m.creator, m.artist, m.album, m.genre, m.comment, song.disc,
-	                   song.track, m.dlna_pn, song.mime?song.mime:m.mime, album_art);
+	                   path, (long long)file.st_size, (long long)file.st_mtime, m2->duration, song.channels, song.bitrate,
+	                   song.samplerate, m2->date, m2->title, m2->creator, m2->artist, m2->album, m2->genre, m2->comment, song.disc,
+	                   song.track, m2->dlna_pn, song.mime?song.mime:m2->mime, album_art);
+
+	metadata_tidy_free(m2) ;
+
 	if( ret != SQLITE_OK )
 	{
 		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);
@@ -495,6 +509,7 @@ GetAudioMetadata(const char *path, const char *name)
 	{
 		ret = sqlite3_last_insert_rowid(db);
 	}
+
 	freetags(&song);
 	free_metadata(&m, free_flags);
 
@@ -660,13 +675,18 @@ no_exifdata:
 	m.title = strdup(name);
 	strip_ext(m.title);
 
+	metadata_t* m2 = metadata_tidy_dup(&m) ;
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
 	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
 	                   "VALUES"
 	                   " (%Q, '%q', %lld, %lld, %Q, %Q, %u, %d, %Q, %Q, %Q);",
-	                   path, m.title, (long long)file.st_size, (long long)file.st_mtime, m.date,
-	                   m.resolution, m.rotation, thumb, m.creator, m.dlna_pn, m.mime);
+	                   path, m2->title, (long long)file.st_size, (long long)file.st_mtime, m2->date,
+	                   m2->resolution, m2->rotation, thumb, m2->creator, m2->dlna_pn, m2->mime);
+
+	metadata_tidy_free(m2) ;
+
 	if( ret != SQLITE_OK )
 	{
 		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);
@@ -1591,15 +1611,20 @@ video_no_dlna:
 	freetags(&video);
 	lav_close(ctx);
 
+	metadata_t* m2 = metadata_tidy_dup(&m) ;
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
 	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART, DISC, TRACK) "
 	                   "VALUES"
 	                   " (%Q, %lld, %lld, %Q, %Q, %u, %u, %u, %Q, '%q', %Q, %Q, %Q, %Q, %Q, '%q', %lld, %u, %u);",
-	                   path, (long long)file.st_size, (long long)file.st_mtime, m.duration,
-	                   m.date, m.channels, m.bitrate, m.frequency, m.resolution,
-	                   m.title, m.creator, m.artist, m.genre, m.comment, m.dlna_pn,
-	                   m.mime, album_art, m.disc, m.track);
+	                   path, (long long)file.st_size, (long long)file.st_mtime, m2->duration,
+	                   m2->date, m2->channels, m2->bitrate, m2->frequency, m2->resolution,
+	                   m2->title, m2->creator, m2->artist, m2->genre, m2->comment, m2->dlna_pn,
+	                   m2->mime, album_art, m2->disc, m2->track);
+
+	metadata_tidy_free(m2) ;
+
 	if( ret != SQLITE_OK )
 	{
 		DPRINTF(E_ERROR, L_METADATA, "Error inserting details for '%s'!\n", path);

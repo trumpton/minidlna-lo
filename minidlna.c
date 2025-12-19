@@ -549,6 +549,7 @@ init(int argc, char **argv)
 	struct sigaction sa;
 	const char * presurl = NULL;
 	const char * optionsfile = "/etc/minidlna.conf";
+	const char * layoutfile = NULL; // LAYOUT
 	char mac_str[13];
 	char *string, *word;
 	char *path;
@@ -602,6 +603,9 @@ init(int argc, char **argv)
 	{
 		switch (ary_options[i].id)
 		{
+		case LAYOUT: //LAYOUT
+			layoutfile = ary_options[i].value ;
+			break ;
 		case UPNPIFNAME:
 			for (string = ary_options[i].value; (word = strtok(string, ",")); string = NULL)
 			{
@@ -1029,6 +1033,12 @@ init(int argc, char **argv)
 		DPRINTF(E_FATAL, L_GENERAL, SERVER_NAME " is already running. EXITING.\n");
 
 	set_startup_time();
+
+	// LAYOUT
+	if (layoutfile)
+                lo=layout_newfrom((char *)layoutfile) ;
+        else
+                lo=NULL ;
 
 	/* presentation url */
 	if (presurl)
