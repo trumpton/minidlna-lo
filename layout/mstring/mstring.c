@@ -239,11 +239,12 @@ long int string_cstrlen(string str)
 long int string_cstrcpy(string dst, char *utf8src)
 {
   long int len=-1 ;
-  
-  if (utf8src && dst) {
+  char *src  = utf8src ? utf8src : "" ;
+
+  if (dst) {
 
     string_clear(dst) ;
-    dst->len = utf8_mblen(utf8src) ;
+    dst->len = utf8_mblen(src) ;
 
     if (dst->len>0) {
       dst->data = malloc( (dst->len) * sizeof(character) ) ;
@@ -252,7 +253,7 @@ long int string_cstrcpy(string dst, char *utf8src)
 	character ch ;
 	int used ;
 	do {
-	  used = utf8_to_character(&utf8src[srcpos], &ch) ;
+	  used = utf8_to_character(&src[srcpos], &ch) ;
 	  if (used>0) {
 	    srcpos+=used ;
 	    dst->data[dstpos++] = ch ;
