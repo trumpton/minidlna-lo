@@ -57,6 +57,7 @@
 
 #include "mstring/mstring.h"
 #include "metadata_tidy.h"
+#include "../metadata.h"
 
 // Use the ASCII Record Separator Internally to delimit the 
 // Paths used when manipulating the chains.  In the unlikely
@@ -81,8 +82,8 @@ struct _layout_data {
   struct _layout_section *section ;
 
   // Search Variables
-  stringlist folderpathitem ;
-  stringlist folderpathclass ;
+  stringlist chainitems ;
+  stringlist chainclasses ;
   stringlist searchitemparts ;
   stringlist searchclassparts ;
   int searchhandle ;
@@ -106,7 +107,7 @@ typedef struct _layout_data * layout ;
 //
 // layout item/handle to use in future calls
 //
-layout layout_newfrom(char *filename) ;
+layout layout_newfrom(const char *filename) ;
 
 //
 // layout_free
@@ -140,25 +141,17 @@ void layout_clean(layout lo, const char *cstrtype, const char *cstrvar, string v
 //
 // an integer search-handle, which is used for the num and find functions
 //
-int layout_search(layout lo, char *mediatype, char *path,
-		  char *creator, char *albumartist,
-		  char *artist,  char *album,
-		  char *disc, char *tracknum,
-		  char *title,  char *comment,
-		  char *genre,  char *date,
-		  char *resolution, char *rotation,
-		  char *duration,  char *bitrate,
-		  char *location) ;
+int layout_search(layout lo, const char *mediatype, const char *path, const metadata_t *m) ;
 
 //
 // layout_numitems
 //
 // RETURNS
 //
-// The number of items (media file references) found in the search, or 
+// The number of items (chains) found in the search, or
 // -1 if the search handle is not valid.
 //
-int layout_numitems(layout lo, int searchhandle) ;
+int layout_numchains(layout lo, int searchhandle) ;
 
 //
 // layout_finditem
@@ -169,15 +162,20 @@ int layout_numitems(layout lo, int searchhandle) ;
 // RETURNS
 //
 // true on success
-// itemfieldname is updated to point to the requested field
-// itemtype is updated to point to the media type of the item
 //
-int layout_finditemfield(layout lo, int searchhandle, int itemnum, int field,
-		    char **itemfieldname, char **itemfieldclass) ;
+// chainnum: the number of the chain
+// field: the section within the chain /field0/field1/field2 etc..
+// fieldname is updated to point to the requested field
+// fieldclass is updated to point to the media type of the requested field
+int layout_findfield(layout lo, int searchhandle, int chainnum, int fieldnum,
+		    char **fieldnameptr, char **fieldclassptr) ;
 
-// Access the full folderpath for the item and class
-char * layout_folderpathitem(layout lo, int searchhandle, int itemnum) ;
-char * layout_folderpathclass(layout lo, int searchhandle, int itemnum) ;
+
+// Access the full folderpath for the item and class - useful for debug purposes
+// the resulting string is the expanded chain with the SQL_PATH_SEPARATOR
+// in the string between fields / sections of the path.
+char * layout_chainitems(layout lo, int searchhandle, int chainnum) ;
+char * layout_chainclasses(layout lo, int searchhandle, int chainnum) ;
 
 //
 // layout_numfolders
@@ -206,6 +204,11 @@ int layout_findfolderfield(layout lo, int searchhandle, int foldernum, int field
 
 char * layout_foldername(layout lo, int searchhandle, int foldernum) ;
 char * layout_folderclass(layout lo, int searchhandle, int foldernum) ;
+
+//
+// Logging
+//
+void layout_dumptolog(layout lo, int level) ;
 
 #ifndef LAYOUT_C
 // Global layout object

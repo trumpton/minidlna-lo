@@ -64,7 +64,9 @@ int stringlist_merge(stringlist list, int from, int to, char *separator, string 
 
 // Allocate, clear  and free memory for the string
 string string_new() ;
-string string_newfrom(char *utf8src) ;
+string string_newfrom(const char *utf8src) ;
+string string_newfromint(int i, int base, int pad) ;
+
 void string_clear(string str) ;
 void string_free(string str) ;
 
@@ -90,7 +92,7 @@ char *string_cstr(string str) ;
 
 // copy src into dst. Returns the number of characters, or -1 on error
 long int string_strcpy(string dst, string src);
-long int string_cstrcpy(string dst, char *utf8src) ;
+long int string_cstrcpy(string dst, const char *utf8src) ;
 
 // search for character 'needle' in 'src', and
 // return position or -1 if not found
@@ -103,29 +105,29 @@ long int string_rfindch(string src, character needle) ;
 // -1 if str1 comes before str2
 // 1 if str2 comes before str1
 int string_strcmp(string str1, string str2) ;
-int string_cstrcmp(string str1, char *str2) ;
+int string_cstrcmp(string str1, const char *str2) ;
 
 // Case Insensitive Matches str1 and str2, returns
 // 0 if equal
 // -1 if str1 comes before str2
 // 1 if str2 comes before str1
 int string_strcasecmp(string str1, string str2) ;
-int string_cstrcasecmp(string str1, char *str2) ;
+int string_cstrcasecmp(string str1, const char *str2) ;
 
 
 // search for a string, and return its index, or -1 if not found
 long int string_search(string haystack, string needle) ;
 long int string_searchn(string haystack, string needle, long int start) ;
-long int string_cstrsearch(string haystack, char *needle) ;
-long int string_cstrsearchn(string haystack, char *needle, long int start) ;
+long int string_cstrsearch(string haystack, const char *needle) ;
+long int string_cstrsearchn(string haystack, const char *needle, long int start) ;
 
 // replace all occurrences of 'what' in string 'str' with 'with'
 // with replacen, replace occurrences starting from character 'start'
 int string_replace(string str, string what, string with) ;
 int string_replacen(string str, string what, string with, long int start,
 		    int count) ;
-int string_cstrreplace(string str, char *what, char *with) ;
-int string_cstrreplacen(string str, char *what, char *with, 
+int string_cstrreplace(string str, const char *what, const char *with) ;
+int string_cstrreplacen(string str, const char *what, const char *with,
 		    long int start, int count) ;
 
 

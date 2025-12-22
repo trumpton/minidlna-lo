@@ -62,6 +62,9 @@
 #define MINIDLNA_VERSION "1.3.3-lo"
 //#define MINIDLNA_VERSION "1.3.3"
 
+// Plays For Sure Folder Structure Support
+//#define PLAYSFORSURE_SUPPORT
+
 #ifdef NETGEAR
 # define SERVER_NAME "ReadyDLNA"
 #else

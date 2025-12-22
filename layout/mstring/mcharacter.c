@@ -130,7 +130,7 @@ int character_to_utf8(character src, char *dest)
 /*
  * Convert a UTF8 multibyte string to a character
  */
-int utf8_to_character(char *src, character *dest)
+int utf8_to_character(const char *src, character *dest)
 {
   if (!src) return -1 ;
   
@@ -165,7 +165,7 @@ int utf8_to_character(char *src, character *dest)
 /*
  * Returns the character pointed to by utf8chr
  */
-character ascharacter(char *utf8chr)
+character ascharacter(const char *utf8chr)
 {
   character reply ;
   utf8_to_character(utf8chr, &reply) ;
@@ -176,7 +176,7 @@ character ascharacter(char *utf8chr)
 /*
  * Calculates the number of multibyte chars encoded in a UTF8 string
  */
-size_t utf8_mblen(char *src)
+size_t utf8_mblen(const char *src)
 {
   size_t len=-1 ;
   if (src) {

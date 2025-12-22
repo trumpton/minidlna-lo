@@ -66,6 +66,137 @@ struct virtual_item
 	char name[256];
 };
 
+// LAYOUT SUPPORT FUNCTIONS
+
+// LAYOUT support function
+// GetDetailsFromId - given a detailID, extract and populate a metadata_t
+// structure with information from the database DETAILS table.
+metadata_t*
+GetDetailsFromId(int64_t detailID) {
+
+	char **result ;
+ 	int ret, rows ;
+	char query[512] ;
+	metadata_t *m ;
+	m = malloc(sizeof(metadata_t)) ;
+	memset(m, '\0', sizeof(metadata_t)) ;
+
+	if (detailID) {
+
+		snprintf(query, sizeof(query)-1, "SELECT TITLE, DURATION, BITRATE, SAMPLERATE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, CHANNELS, DISC, TRACK, DATE, RESOLUTION, ROTATION, DLNA_PN, MIME from DETAILS where ID = %ld;",
+			detailID) ;
+
+		if( (sql_get_table(db, query, &result, &ret, &rows) == SQLITE_OK) && ret ) {
+			if (result[rows+0]) { m->title = strdup(result[rows+0]) ; }
+			if (result[rows+1]) { m->duration = strdup(result[rows+1]) ; }
+			if (result[rows+2]) { m->bitrate = atoi(result[rows+2]) ; }
+			if (result[rows+3]) { m->frequency = atoi(result[rows+3]) ; }
+			if (result[rows+4]) { m->creator = strdup(result[rows+4]) ; }
+			if (result[rows+5]) { m->artist = strdup(result[rows+5]) ; }
+			if (result[rows+6]) { m->album = strdup(result[rows+6]) ; }
+			if (result[rows+7]) { m->genre = strdup(result[rows+7]) ; }
+			if (result[rows+8]) { m->comment = strdup(result[rows+8]) ; }
+			if (result[rows+9]) { m->channels = atoi(result[rows+9]) ; }
+			if (result[rows+10]) { m->disc = atoi(result[rows+10]) ; }
+			if (result[rows+11]) { m->track = atoi(result[rows+11]) ; }
+			if (result[rows+12]) { m->date = strdup(result[rows+12]) ; }
+			if (result[rows+13]) { m->resolution = strdup(result[rows+13]) ; }
+			if (result[rows+14]) { m->rotation = atoi(result[rows+14]) ; }
+			if (result[rows+15]) { m->dlna_pn = strdup(result[rows+15]) ; }
+			if (result[rows+16]) { m->mime = strdup(result[rows+16]) ; }
+			sqlite3_free_table(result);
+		}
+	}
+
+	return m ;
+}
+
+// LAYOUT support function.  Given the search handle which points to a chain
+// Creates a browse hierarchy within the DETAILS and OBJECTS tables as required
+// and add the file object (at the end of the chain) which should already have
+// been added to the DETAILS table and have an ID of mediaDetailID
+void
+AddFileToDatabase(int searchhandle, const char *mediaRefID, int64_t mediaDetailID)
+{
+	char parentID[128], objectID[128] ;
+	const char *rootID = "0" ;
+
+	// Step through the chains
+	int numchains = layout_numchains(lo, searchhandle) ;
+	for (int chainnum=0; chainnum<numchains; chainnum++) {
+
+		DPRINTF(E_DEBUG, L_SCANNER, "layout processing chain=%d (%s)\n",
+				chainnum, layout_chainitems(lo, searchhandle, chainnum)) ;
+
+		// Initialise objectID and parentID
+		strcpy(objectID, "") ;
+		strcpy(parentID, rootID) ;
+
+		char *fieldname, *fieldclass ;
+		int fieldnum=0 ;
+
+		// Step through the fields in a chain
+		while (layout_findfield(lo, searchhandle, chainnum, fieldnum, &fieldname, &fieldclass)) {
+
+			// Determine whether the current field is a container or an item
+			int iscontainer = fieldclass && (strncmp(fieldclass, "container.", 10)==0) ;
+
+			char *ret = sql_get_text_field(db,
+				"SELECT OBJECT_ID from OBJECTS where PARENT_ID = '%s' and NAME = '%s' and CLASS = '%s';",
+				parentID, fieldname, fieldclass) ;
+
+			if (ret) {
+
+				// Found, so no need to add anything
+				strncpy(objectID, ret, sizeof(objectID)-1) ;
+				sqlite3_free(ret) ;
+
+			} else {
+
+				// Not found
+				// If the item is a container, add to the DETAILS table
+				// Otherwise use the detailID and refID for the file previously
+				// added to the all items (64$) part of the OBJECTS table
+				// Set correct detailID and refID for the container / item
+				int64_t detailID = iscontainer ? GetFolderMetadata(fieldname, NULL, NULL, NULL, 0) : mediaDetailID ;
+				const char *refID = iscontainer ? NULL : mediaRefID ;
+
+				// Find the next available entry
+				int64_t nextID = get_next_available_id("OBJECTS", parentID) ;
+
+				if (strcmp(parentID,rootID)==0) {
+					// Root item, so don't include the parentID in the objectID
+					//strcpy(parentID, rootID) ;
+					snprintf(objectID, sizeof(objectID), "%lX", nextID) ;
+				} else {
+					// child item, so copy objectID to parentID and build new objectID
+					strcpy(parentID, objectID) ;
+					snprintf(objectID, sizeof(objectID), "%s$%lX", parentID, nextID) ;
+				}
+
+				// And add to the OBJECTS table - add the refID for non-container media types
+				if (!sql_exec(db,
+						"INSERT into OBJECTS (REF_ID, OBJECT_ID, PARENT_ID, DETAIL_ID, NAME, CLASS) "
+						"VALUES"
+						" ('%q', '%q', '%q', %lld, '%q', '%q');",
+						iscontainer?NULL:refID, objectID, parentID, (long long)detailID,
+						fieldname, fieldclass)) {
+
+					// Adding to the database OBJECTS table failed
+					DPRINTF(E_ERROR, L_SCANNER, "Unable to add %s to the OBJECTS table\n", objectID) ;
+				}
+
+			}
+
+			// Ready the parentID for the next part of the path within the chain
+			fieldnum++ ;
+			strcpy(parentID, objectID) ;
+		}
+	}
+}
+// END LAYOUT SUPPORT FUNCTIONS
+
+
 int64_t
 get_next_available_id(const char *table, const char *parentID)
 {
@@ -80,6 +211,8 @@ get_next_available_id(const char *table, const char *parentID)
 			base = strrchr(ret, '$');
 			if( base )
 				objectID = strtoll(base+1, NULL, 16) + 1;
+			else // added ELSE statement for LAYOUT support
+				objectID = strtoll(ret, NULL, 16) + 1;
 			sqlite3_free(ret);
 		}
 
@@ -453,8 +586,6 @@ insert_file(const char *name, const char *path, const char *parentID, int object
 	char objectID[64];
 	int64_t detailID = 0;
 	char base[8];
-	char *typedir_parentID;
-	char *baseid;
 	char *objname;
 	media_types mtype = get_media_type(name);
 
@@ -501,6 +632,10 @@ insert_file(const char *name, const char *path, const char *parentID, int object
 	             " ('%s', '%s%s', '%s', %lld, '%q')",
 	             objectID, BROWSEDIR_ID, parentID, class, detailID, objname);
 
+#ifdef PLAYSFORSURE_SUPPORT
+	char *baseid;
+	char *typedir_parentID;
+
 	if( *parentID )
 	{
 		int typedir_objectID = 0;
@@ -522,6 +657,22 @@ insert_file(const char *name, const char *path, const char *parentID, int object
 
 	insert_containers(objname, path, objectID, class, detailID);
 	free(objname);
+#endif
+
+	// LAYOUT START
+	// Read details back from the DETAILS table in the database
+	// Add file to the database, adding entries to DETAILS and OBJECTS tables as required
+	// pass searchhandle, and objectID.  objectID  is the ID of the first instance of the
+	// item in the OBJECTS table and is used to populate the REF_ID field in the OBJECTS table.
+	metadata_t* m = GetDetailsFromId(detailID) ;
+	char * mediatype = mtype & TYPE_VIDEO ? "video" :
+					   mtype & TYPE_IMAGE ? "image" :
+					   "audio" ;
+	int searchhandle ;
+	searchhandle=layout_search(lo, mediatype, path, m) ;
+	AddFileToDatabase(searchhandle, objectID, detailID) ;
+	metadata_tidy_free(m) ;
+	// LAYOUT END
 
 	return 0;
 }
@@ -531,6 +682,7 @@ CreateDatabase(void)
 {
 	int ret, i;
 	const char *containers[] = { "0","-1",   "root",
+#ifdef PLAYSFORSURE_SUPPORT
 	                        MUSIC_ID, "0", _("Music"),
 	                    MUSIC_ALL_ID, MUSIC_ID, _("All Music"),
 	                  MUSIC_GENRE_ID, MUSIC_ID, _("Genre"),
@@ -548,7 +700,7 @@ CreateDatabase(void)
 	                   IMAGE_DATE_ID, IMAGE_ID, _("Date Taken"),
 	                 IMAGE_CAMERA_ID, IMAGE_ID, _("Camera"),
 	                    IMAGE_DIR_ID, IMAGE_ID, _("Folders"),
-
+#endif
 	                    BROWSEDIR_ID, "0", _("Browse Folders"),
 			0 };
 

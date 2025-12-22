@@ -209,45 +209,45 @@ int _layout_find_chainset(layout lo, string mediatype, string artist,
 
       for (int isor=0; isor<=1; isor++) {
 
-	int process=0 ;
-	if (isor && _layout_getitem(lo, section, "or", 0, result)) {
-	  ormatch=0 ; process=1 ;
-	}
-	if (!isor && _layout_getitem(lo, section, "and", 0, result)) {
-	  process=1 ;
-	}
+        int process=0 ;
+        if (isor && _layout_getitem(lo, section, "or", 0, result)) {
+          ormatch=0 ; process=1 ;
+        }
+        if (!isor && _layout_getitem(lo, section, "and", 0, result)) {
+          process=1 ;
+        }
 
-	if (process) {
+        if (process) {
 
-	  stringlist pair = stringlist_new() ;
-	  string tst = string_new() ;
-	  
-	  if (_layout_pairlist(result, pair)) {
-	    for (int i=0; i<stringlist_len(pair); i+=2) {
-	      string what=stringlist_at(pair, i) ;
-	      string is=stringlist_at(pair, i+1) ;
+          stringlist pair = stringlist_new() ;
+          string tst = string_new() ;
 
-	      if (string_cstrcmp(what, "artist")==0) {
-		string_strcpy(tst, artist) ;
-	      } else if (string_cstrcmp(what, "album")==0) {
-		string_strcpy(tst, album) ;
-	      } else if (string_cstrcmp(what, "genre")==0) {
-		string_strcpy(tst, genre) ;
-	      } else if (string_cstrcmp(what, "comment")==0) {
-		string_strcpy(tst, comment) ;
-	      }
-	      
-	      string_capitalise(tst, TOLOWER) ;     
-	      if (isor && string_strcmp(is, tst)==0) { ormatch=1 ; }
-	      if (!isor && string_strcmp(is, tst)!=0) { andmatch=0 ; }
+          if (_layout_pairlist(result, pair)) {
+            for (int i=0; i<stringlist_len(pair); i+=2) {
+              string what=stringlist_at(pair, i) ;
+              string is=stringlist_at(pair, i+1) ;
 
-	    }
+              if (string_cstrcmp(what, "artist")==0) {
+            string_strcpy(tst, artist) ;
+              } else if (string_cstrcmp(what, "album")==0) {
+            string_strcpy(tst, album) ;
+              } else if (string_cstrcmp(what, "genre")==0) {
+            string_strcpy(tst, genre) ;
+              } else if (string_cstrcmp(what, "comment")==0) {
+            string_strcpy(tst, comment) ;
+              }
 
-	    string_free(tst) ;
-	    stringlist_free(pair) ;
-	  }
+              string_capitalise(tst, TOLOWER) ;
+              if (isor && string_strcmp(is, tst)==0) { ormatch=1 ; }
+              if (!isor && string_strcmp(is, tst)!=0) { andmatch=0 ; }
 
-	}
+            }
+
+            string_free(tst) ;
+            stringlist_free(pair) ;
+          }
+
+        }
 
       }
 
@@ -258,7 +258,7 @@ int _layout_find_chainset(layout lo, string mediatype, string artist,
   } while (!found && section>0) ;
 
   section = _layout_findsection(lo, chainset, 0) ;
-  
+
   string_free(result) ;
   string_free(chainset) ;
   string_free(sectionname) ;
@@ -269,36 +269,14 @@ int _layout_find_chainset(layout lo, string mediatype, string artist,
 
 
 // Expand the given variable var, replacing it with source
-void _layout_expandvariable(layout lo, string field, char *var, string source)
+void _layout_expandvariable(layout lo, string field, const char *var, string source)
 {
   string what = string_newfrom(var) ;
   string with = string_new() ;
   string str ;
-
   if (string_cstrcmp(source, "?")!=0 && string_strlen(source)>0) str=source ;
   else str = lo->configunknown ;
-  
-  if (string_cstrsearch(what, "$ABC")<0) {
-    string_strcpy(with, str) ;
-  } else {
-    character c = character_tolower(character_deaccent(string_at(str, 0))) ;
-    switch (c) {
-    case 'a': case 'b': case 'c': string_cstrcpy(with, "[abc]") ; break ;
-    case 'd': case 'e': case 'f': string_cstrcpy(with, "[def]") ; break ;
-    case 'g': case 'h': case 'i': string_cstrcpy(with, "[ghi]") ; break ;
-    case 'j': case 'k': case 'l': string_cstrcpy(with, "[jkl]") ; break ;
-    case 'm': case 'n': case 'o': string_cstrcpy(with, "[mno]") ; break ;
-    case 'p': case 'q': case 'r': string_cstrcpy(with, "[pqr]") ; break ;
-    case 's': case 't': case 'u': string_cstrcpy(with, "[stu]") ; break ;
-    case 'v': case 'w': case 'x': string_cstrcpy(with, "[vwx]") ; break ;
-    case 'y': case 'z': string_cstrcpy(with, "[yz]") ; break ;
-    case '0': case '1': case '2': case '3': case '4':
-    case '5': case '6': case '7': case '8': case '9':
-      string_cstrcpy(with, "[0-9]") ; break ;
-    default:
-      string_cstrcpy(with, "[...]") ; break ;
-    }
-  }
+  string_strcpy(with, str) ;
   string_replace(field, what, with) ;
   string_free(what) ;
   string_free(with) ;
@@ -361,42 +339,42 @@ void _layout_expandsearch(layout lo, string orgentry, stringlist chainset,
 
       if (string_strlen(word)>=lo->configsearchdepth) {
 
-	string abc = string_new() ;
-	string newentry = string_new() ;
-	string search = string_new() ;
+        string abc = string_new() ;
+        string newentry = string_new() ;
+        string search = string_new() ;
 
-	string_capitalise(word, TOLOWER) ;
-	string_capitalise(word, DEACCENT) ;
+        string_capitalise(word, TOLOWER) ;
+        string_capitalise(word, DEACCENT) ;
 
-	// for [a] [ab] [abc] [abcd]
-	// Build the search sequence
-	for (int j=0; j< lo->configsearchdepth; j++) {
+        // for [a] [ab] [abc] [abcd]
+        // Build the search sequence
+        for (int j=0; j< lo->configsearchdepth; j++) {
 
-	  string_substring(word, abc, 0, j) ;
-	  if (j>0) string_cstrcat(search, SQL_PATH_SEPARATOR) ;
-	  string_cstrcat(search, "[") ;
-	  string_strcat(search, abc) ;
-	  string_cstrcat(search, "]") ;
-	}
+          string_substring(word, abc, 0, j) ;
+          if (j>0) string_cstrcat(search, SQL_PATH_SEPARATOR) ;
+          string_cstrcat(search, "[") ;
+          string_strcat(search, abc) ;
+          string_cstrcat(search, "]") ;
+        }
 
-	// Substitute to create a new entry
-	string_strcpy(newentry, source) ;
-	string_replace(newentry, vars, search) ;
+        // Substitute to create a new entry
+        string_strcpy(newentry, source) ;
+        string_replace(newentry, vars, search) ;
 
-	if (!foundmatch) {
+        if (!foundmatch) {
 
-	  // Replace original Entry (first word match)
-	  string_strcpy(orgentry, newentry) ;
-	  foundmatch=1 ;
-	} else {
-	  // Append to the chainset (other words)
-	  _layout_addtochainset(newentry, chainset) ;
+          // Replace original Entry (first word match)
+          string_strcpy(orgentry, newentry) ;
+          foundmatch=1 ;
+        } else {
+          // Append to the chainset (other words)
+          _layout_addtochainset(newentry, chainset) ;
 
-	}
-      
-      	string_free(abc) ;
-	string_free(search) ;
-	string_free(newentry) ;
+        }
+
+        string_free(abc) ;
+        string_free(search) ;
+        string_free(newentry) ;
 
       }
 
@@ -475,13 +453,11 @@ int _layout_tidypath(layout lo, string path, string filepath, string filename)
 
 
 int _layout_processrule(layout lo, string mediatype, string path,
-			string creator, string albumartist,
-			string artist, string album, string disc,
-			string tracknum, string title, string comment,
-			string genre, string date,
-			string resolution, string rotation,
-			string duration, string bitrate,
-			string location)
+			string title, string artist, string creator,
+			string album, string genre, string comment,
+            string disc, string tracknum, /*string channels,*/
+			string bitrate, /*string frequency,*/ string rotation,
+            string resolution, string duration, string date)
 {
   
   if (!lo) return 0 ;
@@ -493,18 +469,16 @@ int _layout_processrule(layout lo, string mediatype, string path,
   string decade = string_new() ;
   string paddedtracknum = string_new() ; 
   string salbum = string_new() ;
-  string salbumartist = string_new() ;
   
-  stringlist_clear(lo->folderpathitem) ;
-  stringlist_clear(lo->folderpathclass) ;
+  stringlist_clear(lo->chainitems) ;
+  stringlist_clear(lo->chainclasses) ;
   stringlist_clear(lo->searchitemparts) ;
   stringlist_clear(lo->searchclassparts) ;
   lo->searchhandle=-1 ;
   lo->searchitemref=-1 ;
   
   // Find the required chainset and extract the 'chain' entries to chainset
-  lo->searchhandle = _layout_find_chainset(lo, mediatype, artist, album,
-					genre, comment) ;  
+  lo->searchhandle = _layout_find_chainset(lo, mediatype, artist, album, genre, comment) ;
 
   if (lo->searchhandle>=0) {
 
@@ -513,11 +487,19 @@ int _layout_processrule(layout lo, string mediatype, string path,
     int n=0 ;
     while (_layout_getitem(lo, lo->searchhandle, "chain", n, tmp)) {
       string_cstrreplace(tmp, "/", SQL_PATH_SEPARATOR) ;
-      if (string_at(tmp, 0)==SQL_PATH_SEPARATOR_CHAR) 
+      if (string_at(tmp, 0)==SQL_PATH_SEPARATOR_CHAR) {
 		_layout_addtochainset(tmp, chainset) ;
+      }
       n++ ;
     }
     string_free(tmp) ;
+
+
+  } else {
+
+    DPRINTF(E_INFO, L_SCANNER, "Not installing %s (%s / %s), no chainset identified\n",
+            string_cstr(path), string_cstr(album), string_cstr(title)) ;
+
   }
 
 #ifndef DISABLE_LAYOUT_SEARCH
@@ -525,12 +507,9 @@ int _layout_processrule(layout lo, string mediatype, string path,
   int sz=stringlist_len(chainset) ;
   for (int i=0; i<sz; i++) {
     string entry = stringlist_at(chainset, i) ;
-    _layout_expandsearch(lo, entry, chainset, "$SEARCHALBUMARTIST", albumartist) ;
-    _layout_expandsearch(lo, entry, chainset, "$SEARCHALBUM", album) ;
-    _layout_expandsearch(lo, entry, chainset, "$SEARCHTRACKARTIST", artist) ;
-    _layout_expandsearch(lo, entry, chainset, "$SEARCHARTIST", albumartist) ;
-    _layout_expandsearch(lo, entry, chainset, "$SEARCHCOMPOSER", creator) ;
     _layout_expandsearch(lo, entry, chainset, "$SEARCHTITLE", title) ;
+    _layout_expandsearch(lo, entry, chainset, "$SEARCHARTIST", artist) ;         _layout_expandsearch(lo, entry, chainset, "$SEARCHCOMPOSER", creator) ;
+    _layout_expandsearch(lo, entry, chainset, "$SEARCHALBUM", album) ;
   }
 #endif // DISABLE_LAYOUT_SEARCH
 
@@ -541,10 +520,8 @@ int _layout_processrule(layout lo, string mediatype, string path,
   // tidy the date and calculate the year and decade
   _layout_parse_date(date, year, decade) ;
 
-  // Generate a shortened album and albumartist
+  // Generate a shortened album
   _layout_shortenstring(salbum, album) ;
-  _layout_shortenstring(salbumartist, albumartist) ;
-
 
   if (string_strlen(tracknum)<3) {
     string_cstrcpy(paddedtracknum, "0") ;
@@ -579,8 +556,6 @@ int _layout_processrule(layout lo, string mediatype, string path,
 
 	// This is a folder
 	if (string_cstrsearch(field, "$ARTIST")>=0 ||
-		string_cstrsearch(field, "$TRACKARTIST")>=0 ||
-		string_cstrsearch(field, "$ALBUMARTIST")>=0 ||
 		string_cstrsearch(field, "$COMPOSER")>=0 )
 	  string_cstrcpy(class, "container.person.musicArtist") ;
 	else if (string_cstrsearch(field, "$ALBUM")>=0)
@@ -613,12 +588,6 @@ int _layout_processrule(layout lo, string mediatype, string path,
       }
 
       // Tidy up and expand all of the variables, updating class
-      _layout_expandvariable(lo, field, "$ABCTITLE", title) ;
-      _layout_expandvariable(lo, field, "$ABCARTIST", albumartist) ;
-      _layout_expandvariable(lo, field, "$ABCALBUMARTIST", albumartist) ;
-      _layout_expandvariable(lo, field, "$ABCALBUM", album) ;
-      _layout_expandvariable(lo, field, "$ABCCOMPOSER", creator) ;
-      _layout_expandvariable(lo, field, "$ABCTRACKARTIST", artist) ;
       _layout_expandvariable(lo, field, "$COMMENT", comment) ;
       _layout_expandvariable(lo, field, "$DISC", disc) ;
       _layout_expandvariable(lo, field, "$TRACKNUM", tracknum) ;
@@ -628,19 +597,15 @@ int _layout_processrule(layout lo, string mediatype, string path,
       _layout_expandvariable(lo, field, "$DECADE", decade) ;
       _layout_expandvariable(lo, field, "$RESOLUTION", resolution) ;
       _layout_expandvariable(lo, field, "$BITRATE", bitrate) ;
-      _layout_expandvariable(lo, field, "$LOCATION", location) ;
       _layout_expandvariable(lo, field, "$GENRE", genre) ;
-      _layout_expandvariable(lo, field, "$ARTIST", albumartist) ;
-      _layout_expandvariable(lo, field, "$SARTIST", salbumartist) ;
-      _layout_expandvariable(lo, field, "$TRACKARTIST", artist) ;
+      _layout_expandvariable(lo, field, "$ARTIST", artist) ;
       _layout_expandvariable(lo, field, "$COMPOSER", creator) ;
-      _layout_expandvariable(lo, field, "$ALBUMARTIST", albumartist) ;
       _layout_expandvariable(lo, field, "$ALBUM", album) ;
       _layout_expandvariable(lo, field, "$SALBUM", salbum) ;
       _layout_expandvariable(lo, field, "$TITLE", title) ;
       _layout_expandvariable(lo, field, "$PATH", filepath) ;
       _layout_expandvariable(lo, field, "$FILENAME", filename) ;
-      _layout_expandvariable(lo, field, "$LOCATION", location) ;
+      _layout_expandvariable(lo, field, "$FILEBASE", filename) ; // TODO: remove ext.
       _layout_expandvariable(lo, field, "$RND", random) ;
       
       // If the result item contains separators, it has been path-expanded
@@ -668,8 +633,8 @@ int _layout_processrule(layout lo, string mediatype, string path,
     }
 
     // Store the result string and the fieldtype
-    stringlist_push_back(lo->folderpathitem, resultitem) ;
-    stringlist_push_back(lo->folderpathclass, resultclass) ;
+    stringlist_push_back(lo->chainitems, resultitem) ;
+    stringlist_push_back(lo->chainclasses, resultclass) ;
 
     string_free(random) ;
     string_free(class) ;
@@ -679,14 +644,13 @@ int _layout_processrule(layout lo, string mediatype, string path,
     
   }
 
-  string_free(salbum) ;
-  string_free(salbumartist) ;
   stringlist_free(chainset) ;
-  string_free(paddedtracknum) ;
-  string_free(year) ;
-  string_free(decade) ;
   string_free(filename) ;
   string_free(filepath) ;
+  string_free(year) ;
+  string_free(decade) ;
+  string_free(paddedtracknum) ;
+  string_free(salbum) ;
 
   return 1 ;
 }
@@ -702,8 +666,8 @@ void layout_free(layout lo)
       stringlist_free(lo->section[i].arg) ;
     }
     free(lo->section) ;
-    stringlist_free(lo->folderpathitem) ;
-    stringlist_free(lo->folderpathclass) ;
+    stringlist_free(lo->chainitems) ;
+    stringlist_free(lo->chainclasses) ;
     stringlist_free(lo->searchitemparts) ;
     stringlist_free(lo->searchclassparts) ;
     stringlist_free(lo->configstripfolder) ;
@@ -715,7 +679,7 @@ void layout_free(layout lo)
 }
 
 // Load a New Layout Configuration from the given file
-layout layout_newfrom(char *filename)
+layout layout_newfrom(const char *filename)
 {
   FILE *fp ;
   int configsection = -1 ;
@@ -725,6 +689,7 @@ layout layout_newfrom(char *filename)
   srand(time(NULL)) ;
   
   lo = malloc(sizeof(struct _layout_data)) ;
+  DPRINTF(E_DEBUG, L_SCANNER, "layout_newfrom - creating structure @%p\n", (void *)lo) ;
 
   if (lo) {
 
@@ -732,8 +697,8 @@ layout layout_newfrom(char *filename)
     lo->section=NULL ;
     lo->searchitemparts = stringlist_new() ;
     lo->searchclassparts = stringlist_new() ;
-    lo->folderpathitem = stringlist_new() ;
-    lo->folderpathclass = stringlist_new() ;
+    lo->chainitems = stringlist_new() ;
+    lo->chainclasses = stringlist_new() ;
     lo->configunknown = string_new() ;
     lo->configstripfolder = stringlist_new() ;
     
@@ -742,7 +707,12 @@ layout layout_newfrom(char *filename)
 
     fp=fopen(filename, "rb") ;
 
-    if (fp) {
+    if (!fp) {
+
+      // Won't import anything, so the server will be pretty much useless
+      DPRINTF(E_FATAL, L_SCANNER, "Error opening layout file: %s\n", filename) ;
+
+    } else {
 
       int forcelower=0 ;
       string line = string_new() ;
@@ -753,41 +723,41 @@ layout layout_newfrom(char *filename)
       
       while ( (len=string_readline(fp, line))>=0) {
 
-	if (string_at(line,0)=='[') {
-	  struct _layout_section *newsection ;
-	  
-	  newsection = realloc(lo->section,
-			       sizeof(struct _layout_section) *
-			       (lo->lastsection+2) ) ;
-	  if (newsection) {
-	    lo->section=newsection ;
-	    lo->lastsection++ ;
-	    lo->section[lo->lastsection].title = string_new() ;
-	    lo->section[lo->lastsection].tag = stringlist_new() ;
-	    lo->section[lo->lastsection].arg = stringlist_new() ;
-	    string_substring(line, lo->section[lo->lastsection].title, 1,
-			     string_findch(line, ']')-1) ;
-	    string title = lo->section[lo->lastsection].title ;
-	    string_capitalise(title, TOLOWER) ;
-	    forcelower = (string_cstrcmp(title, "replace")==0 ||
-			  string_cstrcmp(title, "rule")==0) ;
-	    if (string_cstrcmp(title, "config")==0)
-	      configsection=lo->lastsection ;
-	  }
-	} else if (string_findch(line, '=')>0 &&
-		   lo->section && lo->lastsection>=0) {
-	  stringlist parts = stringlist_new() ;
-	  if (string_splitn(line, '=', parts, 2)) {
-	    string tag = stringlist_at(parts, 0) ;
-	    string_capitalise(tag, TOLOWER) ;
-	    string arg = stringlist_at(parts,1) ;
-	    if (forcelower) string_capitalise(arg, TOLOWER) ;
+        if (string_at(line,0)=='[') {
+          struct _layout_section *newsection ;
 
-	    stringlist_push_back(lo->section[lo->lastsection].tag, tag) ;
-	    stringlist_push_back(lo->section[lo->lastsection].arg, arg) ;
-	  }
-	  stringlist_free(parts) ;
-	}
+          newsection = realloc(lo->section,
+                      sizeof(struct _layout_section) *
+                      (lo->lastsection+2) ) ;
+          if (newsection) {
+            lo->section=newsection ;
+            lo->lastsection++ ;
+            lo->section[lo->lastsection].title = string_new() ;
+            lo->section[lo->lastsection].tag = stringlist_new() ;
+            lo->section[lo->lastsection].arg = stringlist_new() ;
+            string_substring(line, lo->section[lo->lastsection].title, 1,
+                    string_findch(line, ']')-1) ;
+            string title = lo->section[lo->lastsection].title ;
+            string_capitalise(title, TOLOWER) ;
+            forcelower = (string_cstrcmp(title, "replace")==0 ||
+                  string_cstrcmp(title, "rule")==0) ;
+            if (string_cstrcmp(title, "config")==0)
+              configsection=lo->lastsection ;
+          }
+        } else if (string_findch(line, '=')>0 &&
+              lo->section && lo->lastsection>=0) {
+          stringlist parts = stringlist_new() ;
+          if (string_splitn(line, '=', parts, 2)) {
+            string tag = stringlist_at(parts, 0) ;
+            string_capitalise(tag, TOLOWER) ;
+            string arg = stringlist_at(parts,1) ;
+            if (forcelower) string_capitalise(arg, TOLOWER) ;
+
+            stringlist_push_back(lo->section[lo->lastsection].tag, tag) ;
+            stringlist_push_back(lo->section[lo->lastsection].arg, arg) ;
+          }
+          stringlist_free(parts) ;
+        }
       }
       string_free(arg) ;
       string_free(tag) ;
@@ -800,7 +770,7 @@ layout layout_newfrom(char *filename)
   // Default Configuration Options
 
   string_cstrcpy(lo->configunknown, "Unknown") ;
-  lo->configsearchdepth=2 ;
+  lo->configsearchdepth=3 ;
 
   // Overwrite with Config Options if Found
 
@@ -825,124 +795,82 @@ layout layout_newfrom(char *filename)
     
   }
 
+  layout_dumptolog(lo, E_DEBUG) ;
+
   return lo ;
 }
 
 // Search for a chainset and return a handle
-int layout_search(layout lo, char *cmediatype, char *cpath,
-                  char *ccreator, char *calbumartist,
-		  char *cartist,  char *calbum,
-		  char *cdisc, char *ctracknum,
-		  char *ctitle,  char *ccomment,
-		  char *cgenre,  char *cdate,
-		  char *cresolution, char *crotation,
-		  char *cduration,  char *cbitrate,
-		  char *clocation)
-{
-  string path = string_new() ;
-  string mediatype = string_new() ;
-  string artist = string_new() ;
-  string creator = string_new() ;
-  string albumartist = string_new() ;
-  string album = string_new() ;
-  string disc = string_new() ;
-  string tracknum = string_new() ;
-  string title = string_new() ;
-  string comment = string_new() ;
-  string genre = string_new() ;
-  string date = string_new() ;
-  string resolution = string_new() ;
-  string rotation = string_new() ;
-  string duration = string_new() ;
-  string bitrate = string_new() ;
-  string location = string_new() ;
+int layout_search(layout lo, const char *cmediatype, const char *cpath, const metadata_t *m) {
 
-  string_cstrcpy(path, cpath) ;
-  
-  layout_clean(NULL, NULL, cmediatype, mediatype) ;
-  layout_clean(lo, "artist", cartist, artist) ;
-  layout_clean(lo, "albumartist", calbumartist, albumartist) ;
-  layout_clean(lo, "album", calbum, album) ;
-  layout_clean(lo, "creator", ccreator, creator) ;
-  layout_clean(NULL, NULL, cdisc, disc) ;
-  layout_clean(NULL, NULL, ctracknum, tracknum) ;
-  layout_clean(lo, "title", ctitle, title) ;
-  layout_clean(lo, "comment", ccomment, comment) ;
-  layout_clean(lo, "genre", cgenre, genre) ;
-  layout_clean(NULL, NULL, cdate, date) ;
-  layout_clean(NULL, NULL, cresolution, resolution) ;
-  layout_clean(NULL, NULL, crotation, rotation) ;
-  layout_clean(NULL, NULL, cduration, duration) ;
-  layout_clean(NULL, NULL, cbitrate, bitrate) ;
-  layout_clean(lo, "location", clocation, location) ;
+  string mediatype = string_newfrom(cmediatype) ;
+  string path = string_newfrom(cpath) ;
+  string title = string_newfrom(m->title) ;
+  string artist = string_newfrom(m->artist) ;
+  string creator = string_newfrom(m->creator) ;
+  string album = string_newfrom(m->album) ;
+  string genre = string_newfrom(m->genre) ;
+  string comment = string_newfrom(m->comment) ;
+  string disc = string_newfromint(m->disc,10,0) ;
+  string track = string_newfromint(m->track,10,2) ;
+  string bitrate = string_newfromint(m->bitrate,10,0) ;
+  string rotation = string_newfromint(m->rotation,10,0) ;
+  string resolution = string_newfrom(m->resolution) ;
+  string duration = string_newfrom(m->duration) ;
+  string date = string_newfrom(m->date) ;
 
-  // Pad 1 digit tracknum with a leading '0'.  This helps
-  // with media clients that sort alphabetically rather
-  // than in track-num sequence
-  
-  if (string_strlen(tracknum)==1) {
-    string paddedtracknum = string_newfrom("0") ;
-    string_strcat(paddedtracknum, tracknum) ;
-    string_strcpy(tracknum, paddedtracknum) ;
-    string_free(paddedtracknum) ;
-  }
-    
   _layout_processrule(lo, mediatype, path,
-		      creator, albumartist, artist, album, disc, tracknum, title, comment, genre,
-		      date,
-		      resolution, rotation,
-		      duration, bitrate,
-		      location) ;
+		      title, artist, creator, album, genre, comment,
+		      disc, track, bitrate, rotation, resolution,
+              duration, date) ;
 
   string_free(path) ;
   string_free(mediatype) ;
+  string_free(title) ;
   string_free(artist) ;
   string_free(creator) ;
-  string_free(albumartist) ;
   string_free(album) ;
-  string_free(disc) ;
-  string_free(tracknum) ;
-  string_free(title) ;
-  string_free(comment) ;
   string_free(genre) ;
-  string_free(date) ;
-  string_free(resolution) ;
-  string_free(rotation) ;
-  string_free(duration) ;
+  string_free(comment) ;
+  string_free(disc) ;
+  string_free(track) ;
   string_free(bitrate) ;
-  string_free(location) ;
+  string_free(rotation) ;
+  string_free(resolution) ;
+  string_free(duration) ;
+  string_free(date) ;
   
   return lo->searchhandle ;
 }
 
-char * layout_folderpathitem(layout lo, int searchhandle, int itemnum)
+char * layout_chainitems(layout lo, int searchhandle, int itemnum)
 {
-  return string_cstr(stringlist_at(lo->folderpathitem, itemnum)) ;
+  return string_cstr(stringlist_at(lo->chainitems, itemnum)) ;
 }
 
-char * layout_folderpathclass(layout lo, int searchhandle, int itemnum)
+char * layout_chainclasses(layout lo, int searchhandle, int itemnum)
 {
-  return string_cstr(stringlist_at(lo->folderpathclass, itemnum)) ;
+  return string_cstr(stringlist_at(lo->chainclasses, itemnum)) ;
 }
 
 
-// Extracts the field names for a given item
-int layout_finditemfield(layout lo, int searchhandle,
-			 int row, int field,
+// Extracts the field names for a given chain
+int layout_findfield(layout lo, int searchhandle,
+			 int chainnum, int field,
 			 char **parttext, char **partclass)
 {
   *parttext="" ;
   *partclass="" ;
 
   if (searchhandle!=lo->searchhandle) return 0 ;
-  if (row<0 || row>=stringlist_len(lo->folderpathitem)) return 0 ;
+  if (chainnum<0 || chainnum>=stringlist_len(lo->chainitems)) return 0 ;
 
-  if (row!=lo->searchitemref) {
-    lo->searchitemref=row ;
-    string_split(stringlist_at(lo->folderpathitem, row), 
+  if (chainnum!=lo->searchitemref) {
+    lo->searchitemref=chainnum ;
+    string_split(stringlist_at(lo->chainitems, chainnum),
 		 SQL_PATH_SEPARATOR_CHAR,
 		 lo->searchitemparts) ;
-    string_split(stringlist_at(lo->folderpathclass, row), 
+    string_split(stringlist_at(lo->chainclasses, chainnum),
 		 SQL_PATH_SEPARATOR_CHAR,
 		 lo->searchclassparts) ;
   }
@@ -956,9 +884,23 @@ int layout_finditemfield(layout lo, int searchhandle,
   return 1 ;
 }
 
-int layout_numitems(layout lo, int searchhandle)
+int layout_numchains(layout lo, int searchhandle)
 {
   if (searchhandle!=lo->searchhandle) return -1 ;
-  return stringlist_len(lo->folderpathitem) ;
+  return stringlist_len(lo->chainitems) ;
 }
 
+// Dump
+void layout_dumptolog(layout lo, int level)
+{
+    DPRINTF(level, L_SCANNER, "Layout @%p =>\n", (void *)lo) ;
+    for (int s=0; s<lo->lastsection; s++) {
+        DPRINTF(level, L_SCANNER, "  [%s]\n", string_cstr(lo->section[s].title)) ;
+        int items = stringlist_len(lo->section[s].tag) ;
+        for (int i=0; i<items; i++) {
+            DPRINTF(level, L_SCANNER, "    %s=%s\n",
+                    string_cstr(stringlist_at(lo->section[s].tag, i)),
+                    string_cstr(stringlist_at(lo->section[s].arg, i))) ;
+        }
+    }
+}

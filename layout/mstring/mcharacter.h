@@ -65,9 +65,9 @@
 #define CHNUL (character)0
 
 int character_to_utf8(character src, char *dest) ;
-int utf8_to_character(char *src, character *dest) ;
-character ascharacter(char *utf8chr) ;
-size_t utf8_mblen(char *src) ;
+int utf8_to_character(const char *src, character *dest) ;
+character ascharacter(const char *utf8chr) ;
+size_t utf8_mblen(const char *src) ;
 character character_toupper(character src) ;
 character character_tolower(character src) ;
 character character_deaccent(character src) ;

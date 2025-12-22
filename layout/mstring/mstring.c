@@ -165,14 +165,19 @@ string string_new()
   return ptr ;
 }
 
-
-string string_newfrom(char *src)
+string string_newfrom(const char *src)
 {
   string ptr = string_new() ;
   string_cstrcpy(ptr, src) ;
   return ptr ;
 }
 
+string string_newfromint(int i, int base, int pad)
+{
+  string ptr = string_new() ;
+  string_fromint(ptr, i, base, pad) ;
+  return ptr ;
+}
 
 void string_free(string str)
 {
@@ -236,10 +241,10 @@ long int string_cstrlen(string str)
   }
 }
 
-long int string_cstrcpy(string dst, char *utf8src)
+long int string_cstrcpy(string dst, const char *utf8src)
 {
   long int len=-1 ;
-  char *src  = utf8src ? utf8src : "" ;
+  const char *src  = utf8src ? utf8src : "" ;
 
   if (dst) {
 
@@ -412,12 +417,12 @@ character string_at(string str, long int n)
   else return str->data[n] ;
 }
 
-long int string_cstrsearch(string haystack, char *needle)
+long int string_cstrsearch(string haystack, const char *needle)
 {
   return string_cstrsearchn(haystack, needle, 0) ;
 }
 
-long int string_cstrsearchn(string haystack, char *needle, 
+long int string_cstrsearchn(string haystack, const char *needle,
 	long int start)
 {
   string what = string_newfrom(needle) ;
@@ -462,7 +467,7 @@ long int string_searchn(string haystack, string needle, long int start)
   return pos ;
 }
 
-int string_cstrcmp(string str1, char *cstr2)
+int string_cstrcmp(string str1, const char *cstr2)
 {
   if (!str1 || !str1->data) return -1 ;
   if (!cstr2) return 1 ;
@@ -490,7 +495,7 @@ int string_strcmp(string str1, string str2)
   else return -1 ;
 }
 
-int string_cstrcasecmp(string str1, char *cstr2)
+int string_cstrcasecmp(string str1, const char *cstr2)
 {
   if (!str1 || !str1->data) return -1 ;
   if (!cstr2) return 1 ;
@@ -519,12 +524,12 @@ int string_strcasecmp(string str1, string str2)
   else return -1 ;
 }
 
-int string_cstrreplace(string str, char *what, char *with)
+int string_cstrreplace(string str, const char *what, const char *with)
 {
   return string_cstrreplacen(str, what, with, 0, -1) ;
 }
 
-int string_cstrreplacen(string str, char *what, char *with, 
+int string_cstrreplacen(string str, const char *what, const char *with,
 		    long int start, int count)
 {
   int result ;
