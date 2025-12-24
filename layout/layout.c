@@ -11,6 +11,8 @@
 #include <time.h>
 #include <stdint.h>
 #include "../log.h"
+#include <string.h>
+#include "../utils.h"
 #include "layout.h"
 #include "mstring/mstring.h"
 
@@ -132,22 +134,13 @@ int _layout_findwords(string src, stringlist words)
 // Copies the cstrvar into var
 // Processes [replace] if required
 // Capitalises the resulting string
+// And escapes reserved characters
 void layout_clean(layout lo, const char *cstrtype, const char *cstrvar, string var)
 {
   string_cstrcpy(var, cstrvar) ;
 
   // Replace the reserved separator
   string_cstrreplace(var, SQL_PATH_SEPARATOR, SQL_PATH_SEPARATOR_SUB) ;
-
-  // TODO: This is dirty.  What we should do is replace the characters
-  // when we extract them from the SQL database, but only if we need to
-  // do so (i.e. if they are being used for html) and then we should do
-  // the correct substitution so that the end user sees the original 
-  // character
-
-  string_cstrreplace(var, "&", "+") ; // Replace characters used in html
-  string_cstrreplace(var, "<", "{") ;
-  string_cstrreplace(var, ">", "}") ;
 
   if (lo) {
 
@@ -174,6 +167,7 @@ void layout_clean(layout lo, const char *cstrtype, const char *cstrvar, string v
     string_free(tag) ;
     string_free(type) ;
     string_capitalise(var, CAPITALISE) ;
+
   }
 }
 
@@ -574,7 +568,7 @@ int _layout_processrule(layout lo, string mediatype, string path,
 	if (string_cstrcmp(mediatype, "audio")==0) {
 	  if (string_cstrcmp(genre, "Audiobook")==0)
 	    string_cstrcpy(class, "item.audioItem.audioBook") ;
-	  if (string_cstrcmp(genre, "Broadcast")==0)
+	  if (string_cstrcmp(genre, "Broadcast")==0 || string_cstrcmp(genre, "Podcast")==0)
 	    string_cstrcpy(class, "item.audioItem.audioBroadcast") ;
 	  else
 	    string_cstrcpy(class, "item.audioItem.musicTrack") ;
@@ -611,15 +605,14 @@ int _layout_processrule(layout lo, string mediatype, string path,
       // If the result item contains separators, it has been path-expanded
       // So expand the resultclass similarly
       if (string_findch(field, SQL_PATH_SEPARATOR_CHAR)>=0) {
-	string classpath = string_new() ;
-	int i=0 ;
-	while ((i=string_findchn(field, SQL_PATH_SEPARATOR_CHAR, i+1))>=0) {
-	  string_cstrcat(classpath, 
-			"container.storageFolder" SQL_PATH_SEPARATOR) ;
-	}
-	string_strcat(classpath, class) ;
-	string_strcpy(class, classpath) ;
-	string_free(classpath) ;
+        string classpath = string_new() ;
+        int i=0 ;
+        while ((i=string_findchn(field, SQL_PATH_SEPARATOR_CHAR, i+1))>=0) {
+          string_cstrcat(classpath, "container.storageFolder" SQL_PATH_SEPARATOR) ;
+        }
+        string_strcat(classpath, class) ;
+        string_strcpy(class, classpath) ;
+        string_free(classpath) ;
       }
 
       // Append the field to the result string and store
@@ -843,16 +836,11 @@ int layout_search(layout lo, const char *cmediatype, const char *cpath, const me
   return lo->searchhandle ;
 }
 
-char * layout_chainitems(layout lo, int searchhandle, int itemnum)
+int layout_numchains(layout lo, int searchhandle)
 {
-  return string_cstr(stringlist_at(lo->chainitems, itemnum)) ;
+  if (searchhandle!=lo->searchhandle) return -1 ;
+  return stringlist_len(lo->chainitems) ;
 }
-
-char * layout_chainclasses(layout lo, int searchhandle, int itemnum)
-{
-  return string_cstr(stringlist_at(lo->chainclasses, itemnum)) ;
-}
-
 
 // Extracts the field names for a given chain
 int layout_findfield(layout lo, int searchhandle,
@@ -884,11 +872,8 @@ int layout_findfield(layout lo, int searchhandle,
   return 1 ;
 }
 
-int layout_numchains(layout lo, int searchhandle)
-{
-  if (searchhandle!=lo->searchhandle) return -1 ;
-  return stringlist_len(lo->chainitems) ;
-}
+
+
 
 // Dump
 void layout_dumptolog(layout lo, int level)
@@ -904,3 +889,29 @@ void layout_dumptolog(layout lo, int level)
         }
     }
 }
+
+//
+// layout_escape
+//
+// Allocates new buffer and copies src into it, escaping
+// characters suitable for a sql query
+char *layout_escape(const char *src) {
+  string tmp=string_newfrom(src) ;
+  string_cstrreplace(tmp, "'","''") ;
+  char *dst = string_cstrdup(tmp) ;
+  string_free(tmp) ;
+  return dst ;
+}
+
+
+// Debug Tools
+char * layout_chainitems(layout lo, int searchhandle, int itemnum)
+{
+  return string_cstr(stringlist_at(lo->chainitems, itemnum)) ;
+}
+
+char * layout_chainclasses(layout lo, int searchhandle, int itemnum)
+{
+  return string_cstr(stringlist_at(lo->chainclasses, itemnum)) ;
+}
+

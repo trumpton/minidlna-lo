@@ -18,6 +18,7 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include "mstring.h"
 #include "mcharacter.h"
 
@@ -273,6 +274,21 @@ long int string_cstrcpy(string dst, const char *utf8src)
   }
   mstring_debug_cstr_refresh(dst) ;
   return len ;
+}
+
+char *string_cstrdup(string src)
+{
+    int len = src ? string_strlen(src) : 0 ;
+    char *dst ;
+
+    if (len==0) {
+        dst=malloc(1) ;
+        dst[0]='\0' ;
+    } else {
+        dst=malloc(len+1) ;
+        strcpy(dst, string_cstr(src)) ;
+    }
+    return dst ;
 }
 
 char *string_cstr(string src)
@@ -592,30 +608,38 @@ int string_replacen(string str, string what, string with, long int start, int n)
 void string_capitalise(string str, string_option opt)
 {
   if (opt==NOCHANGE) return ;
+
   if (str && str->len>0 && str->data) {
+
     long int i ;
-    // int lastlastwasalpha=0 ;
     int lastwasalpha=0 ;
     int lastwasapostrophe=0 ;
-    int nextnextisalpha=0 ;
+    int lastwasnumber=0;
+
     for (i=0; i<str->len; i++) {
+
       if (opt==DEACCENT) {
-	str->data[i] = character_deaccent(str->data[i]) ;
+        str->data[i] = character_deaccent(str->data[i]) ;
       } else {
-	if ( (opt==CAPITALISE && !lastwasalpha && !lastwasapostrophe) || opt == TOUPPER ) {
-	  str->data[i] = character_toupper(str->data[i]) ;
-	} else {
-	  str->data[i] = character_tolower(str->data[i]) ;
-	}
-	// Apostrophes are preceded by at least 2 alpha characters
-	// Otherwise they are treated as quotes
-	nextnextisalpha = (i<(str->len-2) && character_isletter(str->data[i+2])) ;
-	lastwasapostrophe = (str->data[i]=='\'' &&
-			     ( lastwasalpha && !nextnextisalpha)) ;
-	// && lastlastwasalpha ) ;
-	//	lastlastwasalpha = lastwasalpha ;
-	lastwasalpha = (character_isletter(str->data[i])) ;
+        if ( (opt==CAPITALISE && !lastwasalpha && !lastwasapostrophe && !lastwasnumber) || opt == TOUPPER ) {
+          str->data[i] = character_toupper(str->data[i]) ;
+        } else {
+          str->data[i] = character_tolower(str->data[i]) ;
+        }
       }
+
+      // Apostrophes are sandwiched in-between letters / numbers
+      lastwasapostrophe =   i > 0 &&
+                          character_isletter_or_number(str->data[i-1]) &&
+                          str->data[i]=='\'' &&
+                          character_isletter_or_number(str->data[i+1]) ;
+
+      // Remember whether character is alpha
+      lastwasalpha = (character_isletter(str->data[i])) ;
+
+      // Remember whether characteris a number
+      lastwasnumber = (character_isnumber(str->data[i])) ;
+
     }
     
     str->cstrupdate=1 ;

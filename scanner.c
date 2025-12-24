@@ -141,13 +141,22 @@ AddFileToDatabase(int searchhandle, const char *mediaRefID, int64_t mediaDetailI
 			// Determine whether the current field is a container or an item
 			int iscontainer = fieldclass && (strncmp(fieldclass, "container.", 10)==0) ;
 
+			char *escapedfieldname = layout_escape(fieldname) ;
+
 			char *ret = sql_get_text_field(db,
 				"SELECT OBJECT_ID from OBJECTS where PARENT_ID = '%s' and NAME = '%s' and CLASS = '%s';",
-				parentID, fieldname, fieldclass) ;
+				parentID, escapedfieldname, fieldclass) ;
+
+			DPRINTF(E_DEBUG, L_SCANNER,
+					"SELECT OBJECT_ID from OBJECTS where PARENT_ID = '%s' and NAME = '%s' and CLASS = '%s'; => %s\n",
+				parentID, escapedfieldname, fieldclass, ret?ret:"NULL") ;
+
+			free(escapedfieldname) ;
 
 			if (ret) {
 
 				// Found, so no need to add anything
+				DPRINTF(E_DEBUG, L_SCANNER, "Select found match => %s\n", ret) ;
 				strncpy(objectID, ret, sizeof(objectID)-1) ;
 				sqlite3_free(ret) ;
 
@@ -174,17 +183,21 @@ AddFileToDatabase(int searchhandle, const char *mediaRefID, int64_t mediaDetailI
 					snprintf(objectID, sizeof(objectID), "%s$%lX", parentID, nextID) ;
 				}
 
+				DPRINTF(E_DEBUG, L_SCANNER,
+						"INSERT into OBJECTS (REF_ID, OBJECT_ID, PARENT_ID, DETAIL_ID, NAME, CLASS) "
+						"VALUES"
+						" ('%s', '%s', '%s', %lld, '%s', '%s');",
+						iscontainer?"NULL":refID, objectID, parentID, (long long)detailID,
+						fieldname, fieldclass) ;
+
 				// And add to the OBJECTS table - add the refID for non-container media types
-				if (!sql_exec(db,
+				iscontainer=1 ; // TEMP TODO NEVER SAVE REFID
+				sql_exec(db,
 						"INSERT into OBJECTS (REF_ID, OBJECT_ID, PARENT_ID, DETAIL_ID, NAME, CLASS) "
 						"VALUES"
 						" ('%q', '%q', '%q', %lld, '%q', '%q');",
 						iscontainer?NULL:refID, objectID, parentID, (long long)detailID,
-						fieldname, fieldclass)) {
-
-					// Adding to the database OBJECTS table failed
-					DPRINTF(E_ERROR, L_SCANNER, "Unable to add %s to the OBJECTS table\n", objectID) ;
-				}
+						fieldname, fieldclass) ;
 
 			}
 
@@ -270,6 +283,7 @@ insert_container(const char *item, const char *rootParent, const char *refID, co
 	return ret;
 }
 
+#ifdef PLAYSFORSURE_SUPPORT
 static void
 insert_containers(const char *name, const char *path, const char *refID, const char *class, int64_t detailID)
 {
@@ -516,6 +530,7 @@ insert_containers(const char *name, const char *path, const char *refID, const c
 	sqlite3_free_table(result);
 	valid_cache = 1;
 }
+#endif
 
 int64_t
 insert_directory(const char *name, const char *path, const char *base, const char *parentID, int objectID)

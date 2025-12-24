@@ -6,6 +6,13 @@
  */
 
 //
+// Layout allows the media items to be presented in a UPNP client in a number
+// of different paths, for example, /Media/Artist/Enya/All Tracks/01. Watermark
+// and /Media/Genre/Pop/Album/Watermark/01. Watermark.
+//
+// These paths are called chains, and are made up of several fields - i.e. 'Media',
+// 'Artist', 'Genre' etc. are fields.
+//
 // Layouts are managed using a configuration file, which has several sections
 //
 // [config]
@@ -44,10 +51,8 @@
 // layout_newfrom()    - loads the configuration
 // layout_free()       - releases memory associated with the configuration
 // layout_search()     - searches for a chainset within the configuration
-// layout_numfolders() - returns number of folders found in the search
-// layout_findfolder() - returns folder information
-// layout_numitems()   - returns number of items found in the search
-// layout_finditem()   - returns item information
+// layout_numchains()  - returns number of chains found in the search
+// layout_findfield()  - returns extracts information about a field within a chain.
 //
 // ----------------------------------------------------------------------
 //
@@ -154,7 +159,7 @@ int layout_search(layout lo, const char *mediatype, const char *path, const meta
 int layout_numchains(layout lo, int searchhandle) ;
 
 //
-// layout_finditem
+// layout_findfield
 //
 // This function extracts information from the search, to obtain an item
 // its path, and its media type.
@@ -171,39 +176,12 @@ int layout_findfield(layout lo, int searchhandle, int chainnum, int fieldnum,
 		    char **fieldnameptr, char **fieldclassptr) ;
 
 
-// Access the full folderpath for the item and class - useful for debug purposes
-// the resulting string is the expanded chain with the SQL_PATH_SEPARATOR
-// in the string between fields / sections of the path.
-char * layout_chainitems(layout lo, int searchhandle, int chainnum) ;
-char * layout_chainclasses(layout lo, int searchhandle, int chainnum) ;
-
 //
-// layout_numfolders
+// layout_escape
 //
-// RETURNS
-//
-// The number of folders (media file references) found in the search, or
-// -1 if the search handle is not valid.
-//
-int layout_numfolders(layout lo, int searchhandle) ;
-
-//
-// layout_findfolder
-//
-// This function extracts information from the search, to obtain a folder
-// its path, and its media type.
-//
-// RETURNS
-//
-// true on success
-// folderfieldname is updated to point to the requested field
-// foldertype is updated to point to the media type of the item
-//
-int layout_findfolderfield(layout lo, int searchhandle, int foldernum, int field,
-		      char **folderfieldname, char **foldertype) ;
-
-char * layout_foldername(layout lo, int searchhandle, int foldernum) ;
-char * layout_folderclass(layout lo, int searchhandle, int foldernum) ;
+// Allocates new buffer and copies src into it, escaping
+// characters suitable for a sql query
+char *layout_escape(const char *src) ;
 
 //
 // Logging
@@ -214,5 +192,15 @@ void layout_dumptolog(layout lo, int level) ;
 // Global layout object
 extern layout lo ;
 #endif
+
+
+// Debug Functions
+
+// Access the full folderpath for the item and class - useful for debug purposes
+// the resulting string is the expanded chain with the SQL_PATH_SEPARATOR
+// in the string between fields / sections of the path.
+char * layout_chainitems(layout lo, int searchhandle, int chainnum) ;
+char * layout_chainclasses(layout lo, int searchhandle, int chainnum) ;
+
 
 #endif // _LAYOUT_H

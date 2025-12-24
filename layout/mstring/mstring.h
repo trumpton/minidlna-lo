@@ -90,6 +90,10 @@ long int string_cstrlen(string str) ;
 // packed UTF8 Unicode string (including \0 terminator)
 char *string_cstr(string str) ;
 
+// Allocates memory and duplicates a string
+// Returns a pointer to the newly allocated string
+char *string_cstrdup(string src) ;
+
 // copy src into dst. Returns the number of characters, or -1 on error
 long int string_strcpy(string dst, string src);
 long int string_cstrcpy(string dst, const char *utf8src) ;

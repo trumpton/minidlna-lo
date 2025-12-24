@@ -76,4 +76,7 @@ int character_isnumber(character src) ;
 int character_ispunctuation(character src) ;
 int character_iswhite(character src) ;
 
+#define character_isletter_or_number(c) (character_isletter(c) || character_isnumber(c))
+#define character_ispunctuation_or_white(c) (character_ispunctuation(c) || character_iswhite(c))
+
 #endif // _CHARACTER_H_DEFINED_
