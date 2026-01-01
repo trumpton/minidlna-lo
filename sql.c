@@ -24,7 +24,7 @@
 #include "log.h"
 
 // Add debug statements to log output
-#define SQL_DEBUG
+//#define SQL_DEBUG
 
 int
 sql_exec(sqlite3 *db, const char *fmt, ...)

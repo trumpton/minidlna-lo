@@ -63,7 +63,11 @@
 //#define MINIDLNA_VERSION "1.3.3"
 
 // Plays For Sure Folder Structure Support
-//#define PLAYSFORSURE_SUPPORT
+//#define PLASYFORSURE_SUPPORT
+
+// Place playsforsure files in root of tree
+//#define PLAYSFORSURE_INROOT
+
 
 #ifdef NETGEAR
 # define SERVER_NAME "ReadyDLNA"

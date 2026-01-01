@@ -278,7 +278,9 @@ long int string_cstrcpy(string dst, const char *utf8src)
 
 char *string_cstrdup(string src)
 {
-    int len = src ? string_strlen(src) : 0 ;
+    // int len = src ? strlen(string_cstr(src)) : 0 ;
+    int len = src ? string_cstrlen(src) : 0 ;
+
     char *dst ;
 
     if (len==0) {

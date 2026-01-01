@@ -75,7 +75,7 @@ int64_t
 insert_directory(const char *name, const char *path, const char *base, const char *parentID, int objectID);
 
 int
-insert_file(const char *name, const char *path, const char *parentID, int object, media_types dir_types);
+insert_file(const char *name, const char *path);
 
 int
 CreateDatabase(void);

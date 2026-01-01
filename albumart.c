@@ -139,7 +139,7 @@ update_if_album_art(const char *path)
 		else
 		{
 			snprintf(file, sizeof(file), "%s/%s", dir, dp->d_name);
-			type = resolve_unknown_type(file, dir_type);
+			type = resolve_unknown_type(file);
 		}
 
 		if (type != TYPE_FILE || dp->d_name[0] == '.')

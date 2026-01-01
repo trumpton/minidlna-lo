@@ -485,7 +485,7 @@ is_album_art(const char * name)
 }
 
 int
-resolve_unknown_type(const char * path, media_types dir_type)
+resolve_unknown_type(const char * path)
 {
 	struct stat entry;
 	enum file_types type = TYPE_UNKNOWN;
@@ -516,7 +516,7 @@ resolve_unknown_type(const char * path, media_types dir_type)
 		else if( S_ISREG(entry.st_mode) )
 		{
 			media_types mtype = get_media_type(path);
-			if (dir_type & mtype)
+			if (mtype)
 				type = TYPE_FILE;
 		}
 	}

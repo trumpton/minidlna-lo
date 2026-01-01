@@ -229,7 +229,8 @@ monitor_insert_file(const char *name, const char *path)
 				/* Insert newly-found directory */
 				strcpy(base_name, last_dir);
 				base_copy = basename(base_name);
-				insert_directory(base_copy, last_dir, BROWSEDIR_ID, id+2, get_next_available_id("OBJECTS", id));
+				// TODO: remove insert_directory calls and associated stuff
+				//insert_directory(base_copy, last_dir, BROWSEDIR_ID, id+2, get_next_available_id("OBJECTS", id));
 				sqlite3_free(id);
 				break;
 			}
@@ -254,7 +255,7 @@ monitor_insert_file(const char *name, const char *path)
 	if( !depth )
 	{
 		//DEBUG DPRINTF(E_DEBUG, L_INOTIFY, "Inserting %s\n", name);
-		int ret = insert_file(name, path, id+2, get_next_available_id("OBJECTS", id), dir_types);
+		int ret = insert_file(name, path);
 		if (ret == 1 && (mtype & TYPE_PLAYLIST))
 		{
 			next_pl_fill = time(NULL) + 120; // Schedule a playlist scan for 2 minutes from now.
@@ -317,7 +318,8 @@ monitor_insert_directory(int fd, char *name, const char * path)
 					    " WHERE d.PATH = '%q' and REF_ID is NULL", dirname(parent_buf));
 		if( !id )
 			id = sqlite3_mprintf("%s", BROWSEDIR_ID);
-		insert_directory(name, path, BROWSEDIR_ID, id+2, get_next_available_id("OBJECTS", id));
+		// TODO: remove insert_directory and associated bumf
+		//insert_directory(name, path, BROWSEDIR_ID, id+2, get_next_available_id("OBJECTS", id));
 		sqlite3_free(id);
 		free(parent_buf);
 	}
@@ -347,7 +349,7 @@ monitor_insert_directory(int fd, char *name, const char * path)
 			case DT_REG:
 			case DT_LNK:
 			case DT_UNKNOWN:
-				type = resolve_unknown_type(path_buf, dir_types);
+				type = resolve_unknown_type(path_buf);
 			default:
 				break;
 		}

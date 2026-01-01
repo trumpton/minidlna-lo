@@ -15,8 +15,12 @@
  * You should have received a copy of the GNU General Public License
  * along with MiniDLNA. If not, see <http://www.gnu.org/licenses/>.
  */
+
+#define METADATA_DEBUG_SQL 1
+
 #include "config.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
@@ -149,10 +153,19 @@ check_for_captions(const char *path, int64_t detailID)
 
 	if (ret == 0)
 	{
+
+#ifdef METADATA_DEBUG_SQL
+	DPRINTF(E_DEBUG, L_METADATA,  "INSERT OR REPLACE into CAPTIONS"
+		             " (ID, PATH) "
+		             "VALUES"
+		             " (%lld, %s)\n", (long long)detailID, file);
+
+#endif
+
 		sql_exec(db, "INSERT OR REPLACE into CAPTIONS"
 		             " (ID, PATH) "
 		             "VALUES"
-		             " (%lld, %Q)", detailID, file);
+		             " (%lld, %Q)", (long long)detailID, file);
 	}
 }
 
@@ -276,20 +289,99 @@ free_metadata(metadata_t *m, uint32_t flags)
 		free(m->resolution);
 }
 
+
+//
+// FindFolderMetadata
+//
+// Description:
+//   Searches the DETAILS database table for a matching folder.  Folders have the
+//   following characteristics: SIZE=NULL, TITLE=foldername.  Albums have the same
+//   ALBUM_ART as the entry in the DETAILS table with PATH=MEDIAPATH.  Folders that
+//   have an ALBUM_ART of 0 are simple folders.
+//
+// Parameters:
+//   char *foldername     - Name of the folder part in the chain
+//   char *mediapath      - Name of the media file on the disk at the end of the chain
+//   int isalbum          - True if the folder part represents an album
+//
+// Returns:
+//   The ID of the item in the DETAILS table which represents the requested folder
+//
+int64_t
+FindFolderMetadata(const char *foldername, const char *mediapath, int isalbum)
+{
+	char *ret_art=NULL, *ret_folder=NULL ;
+	int64_t id ;
+	int created=0 ;
+
+	if (isalbum) {
+
+		// An album, so find the corresponding album art from the media file DETAILS entry
+		ret_art = sql_get_text_field(db,
+			"SELECT ALBUM_ART from DETAILS where PATH = %Q and SIZE NOT NULL;", mediapath) ;
+
+		// Now search for the folder container itself (use album_art if found / applicable)
+		ret_folder = sql_get_text_field(db,
+			"SELECT ID from DETAILS where TITLE = %Q and ALBUM_ART = %s and SIZE IS NULL;", foldername, ret_art?ret_art:"0") ;
+
+	} else {
+
+		// Not an album, so find a matching folder
+		ret_folder = sql_get_text_field(db,
+				"SELECT ID from DETAILS where TITLE = %Q and SIZE IS NULL and ALBUM_ART = 0;", foldername) ;
+
+	}
+
+
+	if (ret_folder) {
+
+		// Already exists, so use the same ID
+		id = strtoll(ret_folder, NULL, 10) ;
+
+	} else {
+
+		// Not found, so insert it
+		int sql_ret = sql_exec(db, "INSERT into DETAILS (TITLE, ALBUM_ART) values (%Q, %s);",
+				foldername, ret_art?ret_art:"0") ;
+
+		if( sql_ret != SQLITE_OK )
+			id = 0;
+		else
+			id = sqlite3_last_insert_rowid(db);
+
+	}
+
+	DPRINTF(E_DEBUG, L_METADATA, "FindFolderMetadata(foldername=%s, mediapath=%s isablum=%s) =>%s id=%ld, album_art=%s\n", foldername, mediapath, isalbum?"true":"false", created?" created":"", (long)id, ret_art?ret_art:"0") ;
+
+	if (ret_art) sqlite3_free(ret_art) ;
+	if (ret_folder) sqlite3_free(ret_folder) ;
+
+	return id ;
+}
+
+
 int64_t
 GetFolderMetadata(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art)
 {
-	int ret;
-
+	int ret=0;
+/*
 	char *ntitle = metadata_tidy_dupfield(name, "title") ;
 	char *nartist = metadata_tidy_dupfield(artist, "artist") ;
 	char *ngenre = metadata_tidy_dupfield(genre, "genre") ;
+
+#ifdef METADATA_DEBUG_SQL
+	DPRINTF(E_DEBUG, L_METADATA, "INSERT into DETAILS"
+	                   " (TITLE, PATH, CREATOR, ARTIST, GENRE, ALBUM_ART) "
+	                   "VALUES ('%s', %s, %s, %s, %s, %lld);\n",
+	                   ntitle, path?path:"null", nartist?nartist:"null",
+					   nartist?nartist:"null", ngenre?ngenre:"null", (long long)album_art) ;
+#endif
 
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (TITLE, PATH, CREATOR, ARTIST, GENRE, ALBUM_ART) "
 	                   "VALUES"
 	                   " ('%q', %Q, %Q, %Q, %Q, %lld);",
-	                   ntitle, path, nartist, nartist, ngenre, album_art);
+	                   ntitle, path, nartist, nartist, ngenre, (long long)album_art);
 
 	metadata_tidy_freefield(ntitle) ;
 	metadata_tidy_freefield(nartist) ;
@@ -299,7 +391,7 @@ GetFolderMetadata(const char *name, const char *path, const char *artist, const 
 		ret = 0;
 	else
 		ret = sqlite3_last_insert_rowid(db);
-
+*/
 	return ret;
 }
 
@@ -489,6 +581,23 @@ GetAudioMetadata(const char *path, const char *name)
 
 	metadata_t* m2 = metadata_tidy_dup(&m) ;
 
+#ifdef METADATA_DEBUG_SQL
+	DPRINTF(E_DEBUG, L_METADATA, "INSERT into DETAILS"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
+	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
+	                   "VALUES"
+	                   " (%s, %lld, %lld, '%s', %d, %d, %d, %s, %s, %s, %s, %s, %s, %s, %d, %d, %s, '%s', %lld);\n",
+	                   path?path:"null", (long long)file.st_size, (long long)file.st_mtime,
+					   m2->duration?m2->duration:"null", song.channels, song.bitrate,
+	                   song.samplerate,
+					   m2->date?m2->date:"null", m2->title?m2->title:"null",
+					   m2->creator?m2->creator:"null", m2->artist?m2->artist:"null",
+					   m2->album?m2->album:"null", m2->genre?m2->genre:"null",
+					   m2->comment?m2->comment:"null", song.disc,
+	                   song.track, m2->dlna_pn?m2->dlna_pn:"null", song.mime?song.mime:m2->mime,
+					   (long long) album_art);
+#endif
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, CHANNELS, BITRATE, SAMPLERATE, DATE,"
 	                   "  TITLE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, DISC, TRACK, DLNA_PN, MIME, ALBUM_ART) "
@@ -496,7 +605,7 @@ GetAudioMetadata(const char *path, const char *name)
 	                   " (%Q, %lld, %lld, '%s', %d, %d, %d, %Q, %Q, %Q, %Q, %Q, %Q, %Q, %d, %d, %Q, '%s', %lld);",
 	                   path, (long long)file.st_size, (long long)file.st_mtime, m2->duration, song.channels, song.bitrate,
 	                   song.samplerate, m2->date, m2->title, m2->creator, m2->artist, m2->album, m2->genre, m2->comment, song.disc,
-	                   song.track, m2->dlna_pn, song.mime?song.mime:m2->mime, album_art);
+	                   song.track, m2->dlna_pn, song.mime?song.mime:m2->mime, (long long)album_art);
 
 	metadata_tidy_free(m2) ;
 
@@ -676,6 +785,19 @@ no_exifdata:
 	strip_ext(m.title);
 
 	metadata_t* m2 = metadata_tidy_dup(&m) ;
+
+#ifdef METADATA_DEBUG_SQL
+	DPRINTF(E_DEBUG, L_METADATA, "INSERT into DETAILS"
+	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
+	                    " ROTATION, THUMBNAIL, CREATOR, DLNA_PN, MIME) "
+	                   "VALUES"
+	                   " (%s, '%s', %lld, %lld, %s, %s, %u, %d, %s, %s, %s);\n",
+	                   path?path:"null",
+					   m2->title?m2->title:"null", (long long)file.st_size, (long long)file.st_mtime,
+					   m2->date?m2->date:"null", m2->resolution?m2->resolution:"null",
+					   m2->rotation, thumb, m2->creator?m2->creator:"null",
+					   m2->dlna_pn?m2->dlna_pn:"null", m2->mime?m2->mime:"null");
+#endif
 
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, TITLE, SIZE, TIMESTAMP, DATE, RESOLUTION,"
@@ -1613,6 +1735,22 @@ video_no_dlna:
 
 	metadata_t* m2 = metadata_tidy_dup(&m) ;
 
+#ifdef METADATA_DEBUG_SQL
+	DPRINTF(E_DEBUG, L_METADATA, "INSERT into DETAILS"
+	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
+	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART, DISC, TRACK) "
+	                   "VALUES"
+	                   " (%s, %lld, %lld, %s, %s, %u, %u, %u, %s, '%s', %s, %s, %s, %s, %s, '%s', %lld, %u, %u);\n",
+	                   path?path:"null", (long long)file.st_size, (long long)file.st_mtime,
+					   m2->duration?m2->duration:"null", m2->date?m2->date:"null",
+				       m2->channels, m2->bitrate, m2->frequency,
+					   m2->resolution?m2->resolution:"null",
+	                   m2->title?m2->title:"null", m2->creator?m2->creator:"null",
+					   m2->artist?m2->artist:"null", m2->genre?m2->genre:"null",
+					   m2->comment?m2->comment:"null", m2->dlna_pn?m2->dlna_pn:"null",
+	                   m2->mime?m2->mime:"null", (long long)album_art, m2->disc, m2->track);
+#endif
+
 	ret = sql_exec(db, "INSERT into DETAILS"
 	                   " (PATH, SIZE, TIMESTAMP, DURATION, DATE, CHANNELS, BITRATE, SAMPLERATE, RESOLUTION,"
 	                   "  TITLE, CREATOR, ARTIST, GENRE, COMMENT, DLNA_PN, MIME, ALBUM_ART, DISC, TRACK) "
@@ -1621,7 +1759,7 @@ video_no_dlna:
 	                   path, (long long)file.st_size, (long long)file.st_mtime, m2->duration,
 	                   m2->date, m2->channels, m2->bitrate, m2->frequency, m2->resolution,
 	                   m2->title, m2->creator, m2->artist, m2->genre, m2->comment, m2->dlna_pn,
-	                   m2->mime, album_art, m2->disc, m2->track);
+	                   m2->mime, (long long)album_art, m2->disc, m2->track);
 
 	metadata_tidy_free(m2) ;
 
@@ -1640,3 +1778,99 @@ video_no_dlna:
 
 	return ret;
 }
+
+// GetMetadataDetailsFromId
+//
+// Description:
+//   Query the database and extract the information as a metadata_t structure
+//   allocates memory and returns pointer to the data found.  If no record is
+//   found, an (allocated) empty structure is returned.
+//
+// Parameters:
+//   int64_t detailID    - Reference number for entry in DETAILS database table
+//
+// Returns:
+//   metadata_t structure
+//
+// Notes:
+//   Structure must be freed with call to metadata_tidy_free(metadata*)
+//
+metadata_t *
+GetMetadataDetailsFromId(int64_t detailID) {
+
+	char **result ;
+ 	int ret, rows ;
+	char query[512] ;
+	metadata_t *m ;
+	m = malloc(sizeof(metadata_t)) ;
+	assert(m) ;
+	memset(m, '\0', sizeof(metadata_t)) ;
+
+	if (detailID) {
+
+		snprintf(query, sizeof(query)-1, "SELECT TITLE, DURATION, BITRATE, SAMPLERATE, CREATOR, ARTIST, ALBUM, GENRE, COMMENT, CHANNELS, DISC, TRACK, DATE, RESOLUTION, ROTATION, DLNA_PN, MIME from DETAILS where ID = %ld;",
+			detailID) ;
+
+		if( (sql_get_table(db, query, &result, &ret, &rows) == SQLITE_OK) && ret ) {
+			if (result[rows+0]) { m->title = strdup(result[rows+0]) ; }
+			if (result[rows+1]) { m->duration = strdup(result[rows+1]) ; }
+			if (result[rows+2]) { m->bitrate = atoi(result[rows+2]) ; }
+			if (result[rows+3]) { m->frequency = atoi(result[rows+3]) ; }
+			if (result[rows+4]) { m->creator = strdup(result[rows+4]) ; }
+			if (result[rows+5]) { m->artist = strdup(result[rows+5]) ; }
+			if (result[rows+6]) { m->album = strdup(result[rows+6]) ; }
+			if (result[rows+7]) { m->genre = strdup(result[rows+7]) ; }
+			if (result[rows+8]) { m->comment = strdup(result[rows+8]) ; }
+			if (result[rows+9]) { m->channels = atoi(result[rows+9]) ; }
+			if (result[rows+10]) { m->disc = atoi(result[rows+10]) ; }
+			if (result[rows+11]) { m->track = atoi(result[rows+11]) ; }
+			if (result[rows+12]) { m->date = strdup(result[rows+12]) ; }
+			if (result[rows+13]) { m->resolution = strdup(result[rows+13]) ; }
+			if (result[rows+14]) { m->rotation = atoi(result[rows+14]) ; }
+			if (result[rows+15]) { m->dlna_pn = strdup(result[rows+15]) ; }
+
+			sqlite3_free_table(result);
+		}
+
+	}
+
+	return m ;
+
+}
+
+// GetMetadataPathFromId
+//
+// Description:
+//   Query the database and extract the path to the requested DETAILS item
+//
+// Parameters:
+//   int64_t detailID    - Reference number for entry in DETAILS database table
+//
+// Returns:
+//   char *              - Pointer to path string
+//
+// Notes:
+//   Allocated path may be empty (if database entry is NULL, for example)
+//   Returned path must be freed with call to free(void*)
+//
+char *
+GetMetadataPathFromId(int64_t detailID) {
+
+    char *p=NULL ;
+
+	char *tmp = sql_get_text_field(db, "SELECT PATH from DETAILS where ID = %ld;", detailID) ;
+
+	if (tmp) {
+		p = strdup(tmp) ;
+		assert(p) ;
+		sqlite3_free(tmp) ;
+	} else {
+		p = malloc(1) ;
+		assert(p) ;
+		p[0]='\0' ;
+	}
+
+	return p ;
+
+}
+

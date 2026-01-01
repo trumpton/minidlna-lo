@@ -545,41 +545,48 @@ int _layout_processrule(layout lo, string mediatype, string path,
       string field = stringlist_at(parts, j) ;
       // string nextfield = stringlist_at(parts, j+1) ;
 
+
       // Work out the class for the current part
       if (j<(szparts-1)) {
 
-	// This is a folder
-	if (string_cstrsearch(field, "$ARTIST")>=0 ||
-		string_cstrsearch(field, "$COMPOSER")>=0 )
-	  string_cstrcpy(class, "container.person.musicArtist") ;
-	else if (string_cstrsearch(field, "$ALBUM")>=0)
-	  string_cstrcpy(class, "container.album.musicAlbum") ;
-	else if (string_cstrsearch(field, "$GENRE")>=0) {
-	  if (string_cstrcmp(mediatype, "audio")==0)
-	    string_cstrcpy(class, "container.genre.musicGenre") ;
-	  else if (string_cstrcmp(mediatype, "video")==0)
-	    string_cstrcpy(class, "container.genre.movieGenre") ;
-	} else 
-	  string_cstrcpy(class, "container.storageFolder") ;
+        // This is a folder
+        if (string_cstrsearch(field, "$ARTIST")>=0 ||
+            string_cstrsearch(field, "$COMPOSER")>=0 ) {
+            string_cstrcpy(class, "container.person.musicArtist") ;
+        } else if (string_cstrsearch(field, "$ALBUM")>=0) {
+            string_cstrcpy(class, "container.album.musicAlbum") ;
+        } else if (string_cstrsearch(field, "$GENRE")>=0) {
+          if (string_cstrcmp(mediatype, "audio")==0) {
+            string_cstrcpy(class, "container.genre.musicGenre") ;
+          } else if (string_cstrcmp(mediatype, "video")==0) {
+            string_cstrcpy(class, "container.genre.movieGenre") ;
+          }
+        } else {
+          string_cstrcpy(class, "container.storageFolder") ;
+        }
 	
       } else {
 	
-	// This is an item
-	if (string_cstrcmp(mediatype, "audio")==0) {
-	  if (string_cstrcmp(genre, "Audiobook")==0)
-	    string_cstrcpy(class, "item.audioItem.audioBook") ;
-	  if (string_cstrcmp(genre, "Broadcast")==0 || string_cstrcmp(genre, "Podcast")==0)
-	    string_cstrcpy(class, "item.audioItem.audioBroadcast") ;
-	  else
-	    string_cstrcpy(class, "item.audioItem.musicTrack") ;
-	} else if (string_cstrcmp(mediatype, "video")==0) {
-	  string_cstrcpy(class, "item.videoItem.video") ;
-	} else if (string_cstrcmp(mediatype, "image")==0) {
-	  string_cstrcpy(class, "item.imageItem.photo") ; 
-	} else {
-	  string_cstrcpy(class, "item") ; 
-	}
+        // This is an item
+        if (string_cstrcmp(mediatype, "audio")==0) {
+          if (string_cstrcmp(genre, "Audiobook")==0)
+            string_cstrcpy(class, "item.audioItem.audioBook") ;
+          if (string_cstrcmp(genre, "Broadcast")==0 || string_cstrcmp(genre, "Podcast")==0)
+            string_cstrcpy(class, "item.audioItem.audioBroadcast") ;
+          else
+            string_cstrcpy(class, "item.audioItem.musicTrack") ;
+        } else if (string_cstrcmp(mediatype, "video")==0) {
+          string_cstrcpy(class, "item.videoItem.video") ;
+        } else if (string_cstrcmp(mediatype, "image")==0) {
+          string_cstrcpy(class, "item.imageItem.photo") ;
+        } else if (string_cstrcmp(mediatype, "playlist")==0) {
+          string_cstrcpy(class, "container.playlistContainer") ;
+        } else {
+          string_cstrcpy(class, "item") ;
+        }
+
       }
+
 
       // Tidy up and expand all of the variables, updating class
       _layout_expandvariable(lo, field, "$COMMENT", comment) ;

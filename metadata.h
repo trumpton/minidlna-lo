@@ -92,6 +92,9 @@ int64_t
 GetFolderMetadata(const char *name, const char *path, const char *artist, const char *genre, int64_t album_art);
 
 int64_t
+FindFolderMetadata(const char *foldername, const char *mediapath, int isalbum);
+
+int64_t
 GetAudioMetadata(const char *path, const char *name);
 
 int64_t
@@ -99,5 +102,11 @@ GetImageMetadata(const char *path, const char *name);
 
 int64_t
 GetVideoMetadata(const char *path, const char *name);
+
+metadata_t *
+GetMetadataDetailsFromId(int64_t detailID) ;
+
+char *
+GetMetadataPathFromId(int64_t detailID) ;
 
 #endif
